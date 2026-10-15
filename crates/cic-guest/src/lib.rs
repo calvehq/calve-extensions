@@ -204,7 +204,8 @@ impl<D: Domain> Guest<D> {
                     r.members += g.delivered_members();
                     rels.extend(d.relate_group(g));
                 }
-                rels.sort_by(|a, b| a.members.cmp(&b.members));
+                // The contract orders relations within a chunk by (kind, first member).
+                rels.sort_by(|a, b| (&a.kind, &a.members).cmp(&(&b.kind, &b.members)));
                 let ack = Ack {
                     groups_received: r.groups,
                     index: x.index,
