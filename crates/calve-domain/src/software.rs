@@ -104,7 +104,8 @@ pub fn relate_group(g: &Group) -> Vec<Relation> {
 fn decode(side: Option<&str>) -> Result<Vec<u8>, Fail> {
     use base64::Engine;
     side.map_or(Ok(vec![]), |s| {
-        base64::engine::general_purpose::STANDARD
+        // OpenAEVC's encoding, as Calve sends it: URL-safe alphabet, no padding.
+        base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(s)
             .map_err(|_| INVALID)
     })
@@ -165,8 +166,6 @@ pub use native::serve;
 
 #[cfg(feature = "native")]
 mod native {
-    use std::path::{Component, Path};
-
     use openaevc::crypto::sha256;
     use openaevc::extension::server::{Extension, HostContext, self_artifact_digest, serve as run};
     use openaevc::extension::wire::{
@@ -179,21 +178,10 @@ mod native {
 
     const FILE_KINDS: [&str; 3] = [SNAPSHOT, DELETE, RENAME];
 
+    /// The contract's locator rules, exactly as Calve's host applies them (one parser, so no
+    /// locator is valid here and read differently there).
     fn locator_ok(locator: &str) -> Result<(), String> {
-        let path = Path::new(locator);
-        if locator.contains('\\')
-            || path.as_os_str().is_empty()
-            || path
-                .components()
-                .any(|part| !matches!(part, Component::Normal(_)))
-            || path
-                .components()
-                .next()
-                .is_some_and(|part| part.as_os_str().eq_ignore_ascii_case(".calve"))
-        {
-            return Err("file locator must be a relative path outside .calve".into());
-        }
-        Ok(())
+        calve_integration_contract::locator::validate(locator)
     }
 
     /// Validates any software file effect. Returns the content digest and size it establishes;
@@ -312,11 +300,18 @@ mod native {
             checked += 1;
             match inspect(&proposal(effect)) {
                 Ok((digest, _)) => {
+                    // A recorded rename also removes its source path: newest first, that is
+                    // the state of `from`.
+                    let at = |p: &str| effect.target.locator == p;
+                    let moved_from = |p: &str| {
+                        effect.kind == RENAME && effect.payload["from"].as_str() == Some(p)
+                    };
                     if let Some((path, expected_digest)) = expected.as_ref()
-                        && effect.target.locator == *path
                         && !found_expected
+                        && (at(path) || moved_from(path))
                     {
                         found_expected = true;
+                        let digest = if at(path) { digest } else { None };
                         if digest != Some(*expected_digest) {
                             findings.push(Finding {
                                 code: "org.calve.software.digest_mismatch".into(),
@@ -530,7 +525,23 @@ mod native {
             let mut lie = put.clone();
             lie["size"] = json!(2);
             assert!(inspect(&effect(SNAPSHOT, "a.txt", lie)).is_err());
-            for bad in ["../x", ".calve/db", ".CALVE/db", "/abs", "a\\b", ""] {
+            for bad in [
+                "../x",
+                ".calve/db",
+                ".CALVE/db",
+                ".calve./db",
+                "/abs",
+                "a\\b",
+                "",
+                "a/./b",
+                "a//b",
+                "a/",
+                "c:x",
+                "a/NUL.txt",
+                "CALVE~1/db",
+                "x ",
+                "x.",
+            ] {
                 assert!(
                     inspect(&effect(SNAPSHOT, bad, put.clone())).is_err(),
                     "{bad}"
@@ -546,6 +557,42 @@ mod native {
                 inspect(&effect(RENAME, "a.txt", moved)).is_err(),
                 "same path"
             );
+        }
+
+        fn applied(e: EffectProposal) -> AppliedEffect {
+            serde_json::from_value(json!({
+                "id": "eff_agqty775fbzsti4zb533hfn7nq", "work_unit": "wku_agqty7727z6cdkfarn4zhawr2i", "kind": e.kind, "target": e.target,
+                "payload": e.payload, "outcome": {},
+                // A provenance recorded by OpenAEVC (shape only; the verifier ignores it).
+                "provenance": {"actor": "pri_agqty76tcz4sfcvgkfpn5nwyiy", "caller": "pri_agqty76tcz4sfcvgkfpn5nwyiy",
+                    "provider": "p", "worker": "local", "harness": "h",
+                    "extension": {"id": ID, "version": "0.1.0", "manifest_digest": format!("sha256:{}", "0".repeat(64))},
+                    "request_id": "req_agqty7736v5qdfg6a4355ptacq", "pack": "rpk_agqty77tej5g5j2vk22qgxe4l4",
+                    "generation": 2, "execution": "exe_agqty773h52txmvjpttfxexzie",
+                    "runtime_instance": "rti_agqty77vrv3bnooly3oihyvrza"}
+            }))
+            .unwrap_or_else(|err| panic!("AppliedEffect shape: {err}"))
+        }
+
+        #[test]
+        fn a_later_rename_away_fails_the_expected_digest() {
+            let d = sha256(b"hi\n");
+            let put = json!({"digest": d, "size": 3, "content": "aGkK"});
+            let mut moved = put.clone();
+            moved["from"] = json!("a.txt");
+            let config = Some(json!({"path": "a.txt", "digest": d}));
+            let only_put = [applied(effect(SNAPSHOT, "a.txt", put.clone()))];
+            assert_eq!(
+                verify(config.clone(), &only_put).unwrap().status,
+                VerificationStatus::Pass
+            );
+            let renamed_away = [
+                applied(effect(SNAPSHOT, "a.txt", put)),
+                applied(effect(RENAME, "b.txt", moved)),
+            ];
+            let out = verify(config, &renamed_away).unwrap();
+            assert_eq!(out.status, VerificationStatus::Fail);
+            assert_eq!(out.findings[0].code, "org.calve.software.digest_mismatch");
         }
     }
 }
@@ -720,7 +767,7 @@ mod tests {
     #[test]
     fn diff_hunks_binary_and_limits() {
         use base64::Engine;
-        let b = |s: &[u8]| Some(base64::engine::general_purpose::STANDARD.encode(s));
+        let b = |s: &[u8]| Some(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s));
         let d = |before, after| {
             diff(DiffIn {
                 path: "f".into(),

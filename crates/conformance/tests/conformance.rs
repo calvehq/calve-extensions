@@ -166,7 +166,7 @@ fn scenario(make: fn(&[u8]) -> Box<dyn Driver>, name: &str) -> Vec<Transcript> {
         let d = ok(
             &mut s,
             "diff",
-            json!({"path": "a", "before": "YQpiCg==", "after": "YQpjCg==", "context": 3}),
+            json!({"path": "a", "before": "YQpiCg", "after": "YQpjCg", "context": 3}),
         );
         assert_eq!(d["hunks"][0]["lines"], json!([" a", "-b", "+c"]));
         out.push(s.transcript.take().unwrap());
