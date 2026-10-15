@@ -1,0 +1,19 @@
+[package]
+name = "calve-ext-hcl"
+description = "HCL: native OpenAEVC extension (org.calve.hcl)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "calve_ext_hcl"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+calve-domain = { workspace = true, features = ["native"] }

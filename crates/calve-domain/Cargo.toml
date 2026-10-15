@@ -1,0 +1,26 @@
+[package]
+name = "calve-domain"
+description = "First-party domain semantics of Calve's extensions: pure CIC logic, plus the native OpenAEVC extensions behind `native`."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# The OpenAEVC extension servers (native binaries); CIC modules build without it for wasm32.
+native = ["dep:openaevc"]
+
+[dependencies]
+base64 = "0.22"
+calve-integration-contract.workspace = true
+openaevc = { workspace = true, optional = true }
+serde_json.workspace = true
+similar.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

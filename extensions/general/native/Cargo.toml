@@ -1,0 +1,19 @@
+[package]
+name = "calve-ext-general"
+description = "General project: native OpenAEVC extension (org.calve.general)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "calve_ext_general"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+calve-domain = { workspace = true, features = ["native"] }

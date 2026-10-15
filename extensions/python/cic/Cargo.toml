@@ -1,0 +1,19 @@
+[package]
+name = "calve-cic-python"
+description = "Python: CIC module (org.calve.python)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+calve-domain.workspace = true
+cic-guest.workspace = true

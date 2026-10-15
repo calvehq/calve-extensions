@@ -1,0 +1,22 @@
+[package]
+name = "calve-extensions-conformance"
+description = "CIC conformance of every first-party module: Calve's production host and the independent testkit host, byte-identical goldens."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+calve-app = { path = "../../../calve-cli/crates/calve-app" }
+calve-domain.workspace = true
+calve-integration-contract.workspace = true
+calve-testkit.workspace = true
+proptest.workspace = true
+serde_json.workspace = true
+sha2 = "0.10"

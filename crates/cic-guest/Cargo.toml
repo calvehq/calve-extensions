@@ -1,0 +1,17 @@
+[package]
+name = "cic-guest"
+description = "CIC guest runtime (ABI 1) for calve-extensions' wasm modules; the only crate with unsafe code."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+calve-integration-contract.workspace = true
+serde.workspace = true
+serde_json.workspace = true
