@@ -18,9 +18,9 @@ cic-guest = { path = "crates/cic-guest" }
 # All three use the same rev; `scripts/bump-contract.sh` moves it and `cargo xtask
 # check-contract` checks it against docs/contract-pins.md. Before the commit is public,
 # `source scripts/dev-env.sh` rewrites the transport to a local checkout (never the lockfile).
-calve-integration-contract = { git = "https://github.com/calvehq/calve-cli.git", rev = "f7f6a37b2980f982b98dd183316d2288acdb5667" }
-calve-testkit = { git = "https://github.com/calvehq/calve-cli.git", rev = "f7f6a37b2980f982b98dd183316d2288acdb5667" }
-calve-app = { git = "https://github.com/calvehq/calve-cli.git", rev = "f7f6a37b2980f982b98dd183316d2288acdb5667" }
+calve-integration-contract = { git = "https://github.com/calvehq/calve-cli.git", rev = "ef8158ae0fa3c0a3862270ac925b591561b0b810" }
+calve-testkit = { git = "https://github.com/calvehq/calve-cli.git", rev = "ef8158ae0fa3c0a3862270ac925b591561b0b810" }
+calve-app = { git = "https://github.com/calvehq/calve-cli.git", rev = "ef8158ae0fa3c0a3862270ac925b591561b0b810" }
 openaevc = { git = "https://github.com/calvehq/openaevc.git", tag = "v0.1.0", version = "=0.1.0", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

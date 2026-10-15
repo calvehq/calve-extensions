@@ -19,3 +19,4 @@ pinned rev.
 |---|---|---|---|---|
 | `d102949f853eabd7546f70d8fa4eb6324e66a347` | 1.0.0-alpha.1 | `d955731c6a68a090d2e1ff065da232f17aa071bd` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
 | `f7f6a37b2980f982b98dd183316d2288acdb5667` | 1.0.0-alpha.1 | `bd49926bd42c21705ff845bc6096ef344fcbd233` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
+| `ef8158ae0fa3c0a3862270ac925b591561b0b810` | 1.0.0-alpha.1 | `ffcbe66d28fde2edd0a0ce35089e8a1c7e52439d` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
