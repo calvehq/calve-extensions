@@ -1,18 +1,20 @@
 # Contract pins
 
-calve-extensions builds against the Calve Integration Contract (`calve-integration-contract`)
-and tests against Calve's host (`calve-app`, `calve-testkit`) from a sibling `../calve-cli`
-checkout. [`CONTRACT_PIN`](../CONTRACT_PIN) names the calve-cli commit those crates must match;
-`cargo xtask check-contract` fails when the checkout differs from it, so a build never silently
-uses another contract.
+calve-extensions builds against the Calve Integration Contract (`calve-integration-contract`) and
+tests against Calve's host crates (`calve-app`, `calve-testkit`), all from calve-cli at one commit
+(ADR 0019): `git = "https://github.com/calvehq/calve-cli.git", rev = "<40-hex>"` in the workspace
+`Cargo.toml`. Reproducibility comes from the commit hash in `Cargo.lock`.
 
-To move to a newer contract:
+Until that commit is public, `source scripts/dev-env.sh [path to calve-cli]` points cargo's git
+fetches at a local checkout for the current shell (`GIT_CONFIG_*` `url.<local>.insteadOf`; no
+global git configuration, and the lockfile keeps the public URL).
 
-1. Check out the new calve-cli commit in `../calve-cli`.
-2. Run `scripts/bump-contract.sh <commit>`: it rewrites the pin, then runs the contract check,
-   the tests and the conformance suite.
-3. Add a row below and commit the pin together with any module changes and new goldens.
+To move to a newer contract, run `scripts/bump-contract.sh <calve-cli commit> [calve binary]`: it
+rewrites the rev, updates the lock, runs the tests, the conformance suite, the architecture check
+and — with a calve binary — every calve-cli example against a freshly published catalog of these
+packages, then appends a row below. `cargo xtask check-contract` requires the newest row to be the
+pinned rev.
 
-| Pin | CIC | Change |
-|---|---|---|
-| see `CONTRACT_PIN` | 1.0 (pre-release) | Initial modules: classify with root `markers`, capture, relate, diff, detect, check_plan, describe |
+| calve-cli | Contract | calve-extensions | Cross-repo e2e | Date |
+|---|---|---|---|---|
+| `d102949f853eabd7546f70d8fa4eb6324e66a347` | 1.0.0-alpha.1 | `d955731c6a68a090d2e1ff065da232f17aa071bd` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |

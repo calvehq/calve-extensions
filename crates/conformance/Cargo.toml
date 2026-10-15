@@ -13,7 +13,7 @@ workspace = true
 [dependencies]
 
 [dev-dependencies]
-calve-app = { path = "../../../calve-cli/crates/calve-app" }
+calve-app.workspace = true
 calve-domain.workspace = true
 calve-integration-contract.workspace = true
 calve-testkit.workspace = true
