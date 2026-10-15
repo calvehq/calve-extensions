@@ -18,3 +18,4 @@ pinned rev.
 | calve-cli | Contract | calve-extensions | Cross-repo e2e | Date |
 |---|---|---|---|---|
 | `d102949f853eabd7546f70d8fa4eb6324e66a347` | 1.0.0-alpha.1 | `d955731c6a68a090d2e1ff065da232f17aa071bd` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
+| `f7f6a37b2980f982b98dd183316d2288acdb5667` | 1.0.0-alpha.1 | `bd49926bd42c21705ff845bc6096ef344fcbd233` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
