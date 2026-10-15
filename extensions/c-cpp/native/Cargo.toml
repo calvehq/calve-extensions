@@ -1,0 +1,19 @@
+[package]
+name = "calve-ext-c-cpp"
+description = "C/C++: native OpenAEVC extension (org.calve.c-cpp)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "calve_ext_c_cpp"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+calve-domain = { workspace = true, features = ["native"] }

@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "extensions/*/native", "extensions/*/cic", "xtask"]
+default-members = ["crates/*", "extensions/*/native", "extensions/*/cic"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "Apache-2.0"
+repository = "https://github.com/calvehq/calve-extensions"
+publish = false
+
+[workspace.dependencies]
+calve-domain = { path = "crates/calve-domain" }
+cic-guest = { path = "crates/cic-guest" }
+# The Calve Integration Contract, from the calve-cli checkout pinned in docs/contract-pins.md
+# (a sibling `../calve-cli`; `scripts/dev-env.sh` prepares it, `cargo xtask check-contract`
+# verifies the pin).
+calve-integration-contract = { path = "../calve-cli/crates/calve-integration-contract" }
+calve-testkit = { path = "../calve-cli/crates/calve-testkit" }
+openaevc = { git = "https://github.com/calvehq/openaevc.git", tag = "v0.1.0", version = "=0.1.0", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+similar = "2"
+proptest = "1.11"
+
+[workspace.lints.rust]
+# Denied (not forbidden) so the cic-guest ABI module can allow it; `cargo xtask
+# check-architecture` refuses `unsafe` anywhere else.
+unsafe_code = "deny"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
