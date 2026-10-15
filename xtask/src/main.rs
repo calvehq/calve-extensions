@@ -3,7 +3,8 @@
 //! - `check-architecture`: unsafe only in `cic-guest`; dependency allowlists; no ambient I/O in
 //!   CIC code; metadata/package consistency; every built module exports exactly the ABI 1
 //!   functions and memory, imports nothing and has no start function.
-//! - `check-contract`: the sibling calve-cli checkout matches the pin in `CONTRACT_PIN`.
+//! - `check-contract`: one calve-cli rev everywhere, equal to the newest docs/contract-pins.md row
+//!   and to what Cargo.lock resolved (ADR 0019).
 //! - `keygen --keys DIR`: new ed25519 role keys, refused inside any git worktree.
 //! - `dist --out DIR`: release packages for this host's platform, with `SHA256SUMS`.
 //! - `sbom OUT`: CycloneDX SBOM of every locked dependency.
@@ -314,24 +315,54 @@ fn check_module(wasm: &[u8]) -> std::result::Result<(), String> {
     Ok(())
 }
 
-/// `CONTRACT_PIN` holds a calve-cli commit; the sibling checkout's contract and testkit crates
-/// must be exactly that commit's.
+/// ADR 0019: every calve-cli dependency uses one `rev`, it is the newest row of
+/// docs/contract-pins.md, and Cargo.lock resolved exactly that commit from the public URL.
 fn check_contract() -> Result {
-    let pin = fs::read_to_string(root().join("CONTRACT_PIN"))?
-        .trim()
-        .to_owned();
-    let cli = root().join("../calve-cli");
-    let git = |args: &[&str]| Command::new("git").arg("-C").arg(&cli).args(args).status();
-    if !git(&["cat-file", "-e", &format!("{pin}^{{commit}}")])?.success() {
-        return Err(format!("calve-cli checkout lacks the pinned commit {pin}").into());
+    const URL: &str = "https://github.com/calvehq/calve-cli.git";
+    let manifest: toml::Value = fs::read_to_string(root().join("Cargo.toml"))?.parse()?;
+    let deps = manifest["workspace"]["dependencies"]
+        .as_table()
+        .ok_or("workspace dependencies")?;
+    let revs: BTreeSet<&str> = deps
+        .values()
+        .filter(|d| d.get("git").and_then(|g| g.as_str()) == Some(URL))
+        .map(|d| d.get("rev").and_then(|r| r.as_str()).unwrap_or(""))
+        .collect();
+    let rev = match revs.iter().collect::<Vec<_>>().as_slice() {
+        [r] if r.len() == 40 && r.bytes().all(|b| b.is_ascii_hexdigit()) => r.to_string(),
+        _ => {
+            return Err(
+                format!("calve-cli dependencies must share one 40-hex rev: {revs:?}").into(),
+            );
+        }
+    };
+    let pins = fs::read_to_string(root().join("docs/contract-pins.md"))?;
+    let latest = pins
+        .lines()
+        .rev()
+        .find_map(|l| l.strip_prefix("| `").and_then(|r| r.split('`').next()))
+        .ok_or("docs/contract-pins.md has no pin rows")?;
+    if latest != rev {
+        return Err(
+            format!("Cargo.toml pins {rev}, docs/contract-pins.md last records {latest}").into(),
+        );
     }
-    let paths = ["crates/calve-integration-contract", "crates/calve-testkit"];
-    let mut args = vec!["diff", "--quiet", pin.as_str(), "--"];
-    args.extend(paths);
-    if !git(&args)?.success() {
-        return Err(format!("../calve-cli differs from the pinned {pin} in {paths:?}").into());
+    let lock = fs::read_to_string(root().join("Cargo.lock"))?;
+    let want = format!("git+{URL}?rev={rev}#{rev}");
+    let calve_sources: BTreeSet<&str> = lock
+        .lines()
+        .filter_map(|l| {
+            l.strip_prefix("source = \"")
+                .and_then(|l| l.strip_suffix('"'))
+        })
+        .filter(|s| s.contains("calvehq/calve-cli"))
+        .collect();
+    if calve_sources.iter().any(|s| *s != want) || calve_sources.is_empty() {
+        return Err(
+            format!("Cargo.lock resolves calve-cli as {calve_sources:?}, want {want}").into(),
+        );
     }
-    println!("contract pin {pin} matches ../calve-cli");
+    println!("contract pin {rev} consistent (Cargo.toml, Cargo.lock, docs/contract-pins.md)");
     Ok(())
 }
 

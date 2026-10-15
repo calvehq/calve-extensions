@@ -14,11 +14,13 @@ publish = false
 [workspace.dependencies]
 calve-domain = { path = "crates/calve-domain" }
 cic-guest = { path = "crates/cic-guest" }
-# The Calve Integration Contract, from the calve-cli checkout pinned in docs/contract-pins.md
-# (a sibling `../calve-cli`; `scripts/dev-env.sh` prepares it, `cargo xtask check-contract`
-# verifies the pin).
-calve-integration-contract = { path = "../calve-cli/crates/calve-integration-contract" }
-calve-testkit = { path = "../calve-cli/crates/calve-testkit" }
+# The Calve Integration Contract and Calve's host crates, pinned by calve-cli commit (ADR 0019).
+# All three use the same rev; `scripts/bump-contract.sh` moves it and `cargo xtask
+# check-contract` checks it against docs/contract-pins.md. Before the commit is public,
+# `source scripts/dev-env.sh` rewrites the transport to a local checkout (never the lockfile).
+calve-integration-contract = { git = "https://github.com/calvehq/calve-cli.git", rev = "d102949f853eabd7546f70d8fa4eb6324e66a347" }
+calve-testkit = { git = "https://github.com/calvehq/calve-cli.git", rev = "d102949f853eabd7546f70d8fa4eb6324e66a347" }
+calve-app = { git = "https://github.com/calvehq/calve-cli.git", rev = "d102949f853eabd7546f70d8fa4eb6324e66a347" }
 openaevc = { git = "https://github.com/calvehq/openaevc.git", tag = "v0.1.0", version = "=0.1.0", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

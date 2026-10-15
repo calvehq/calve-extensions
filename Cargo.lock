@@ -245,6 +245,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "calve-api"
 version = "0.1.0"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=d102949f853eabd7546f70d8fa4eb6324e66a347#d102949f853eabd7546f70d8fa4eb6324e66a347"
 dependencies = [
  "clap",
  "openaevc",
@@ -256,6 +257,7 @@ dependencies = [
 [[package]]
 name = "calve-app"
 version = "0.1.0"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=d102949f853eabd7546f70d8fa4eb6324e66a347#d102949f853eabd7546f70d8fa4eb6324e66a347"
 dependencies = [
  "base64 0.22.1",
  "calve-api",
@@ -465,6 +467,7 @@ dependencies = [
 [[package]]
 name = "calve-integration-contract"
 version = "1.0.0-alpha.1"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=d102949f853eabd7546f70d8fa4eb6324e66a347#d102949f853eabd7546f70d8fa4eb6324e66a347"
 dependencies = [
  "serde",
  "serde_json",
@@ -474,6 +477,7 @@ dependencies = [
 [[package]]
 name = "calve-testkit"
 version = "0.1.0"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=d102949f853eabd7546f70d8fa4eb6324e66a347#d102949f853eabd7546f70d8fa4eb6324e66a347"
 dependencies = [
  "aws-lc-rs",
  "calve-integration-contract",
@@ -491,6 +495,7 @@ dependencies = [
 [[package]]
 name = "calve-win-sec"
 version = "0.1.0"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=d102949f853eabd7546f70d8fa4eb6324e66a347#d102949f853eabd7546f70d8fa4eb6324e66a347"
 dependencies = [
  "windows-sys 0.59.0",
 ]
