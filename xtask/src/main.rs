@@ -6,7 +6,8 @@
 //! - `check-contract`: one calve-cli rev everywhere, equal to the newest docs/contract-pins.md row
 //!   and to what Cargo.lock resolved (ADR 0019).
 //! - `keygen --keys DIR`: new ed25519 role keys, refused inside any git worktree.
-//! - `dist --out DIR`: release packages for this host's platform, with `SHA256SUMS`.
+//! - `dist --out DIR [--target TRIPLE]`: release packages for one exact target triple (default
+//!   this host's), with `SHA256SUMS`.
 //! - `sbom OUT`: CycloneDX SBOM of every locked dependency.
 //! - `publish --keys DIR --dist DIR --repo DIR [--resume]`: a new TUF repository version.
 //!   Everything is staged first and committed file by file, `timestamp.json` last, so a crash
@@ -17,6 +18,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use calve_integration_contract::catalog::{self, NativeBuild, PackageIndex, VersionEntry};
 use calve_integration_contract::jcs;
 use calve_integration_contract::metadata::Metadata;
 use ed25519_dalek::{Signer, SigningKey};
@@ -25,7 +27,7 @@ use sha2::{Digest, Sha256};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR | dist --out DIR | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--resume]>";
+const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR | dist --out DIR [--target TRIPLE] | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--resume]>";
 const ROLES: [&str; 4] = ["root", "targets", "snapshot", "timestamp"];
 const ABI_EXPORTS: [&str; 6] = [
     "memory",
@@ -48,9 +50,10 @@ fn main() {
         Some("keygen") => flag("--keys")
             .ok_or_else(|| USAGE.into())
             .and_then(|k| keygen(&k)),
-        Some("dist") => flag("--out")
-            .ok_or_else(|| USAGE.into())
-            .and_then(|o| dist(&o)),
+        Some("dist") => flag("--out").ok_or_else(|| USAGE.into()).and_then(|o| {
+            let target = flag("--target").map(|t| t.to_string_lossy().into_owned());
+            dist(&o, target.as_deref().unwrap_or(catalog::HOST_TARGET))
+        }),
         Some("sbom") if args.len() == 2 => sbom(Path::new(&args[1])),
         Some("publish") => match (flag("--keys"), flag("--dist"), flag("--repo")) {
             (Some(k), Some(d), Some(r)) => {
@@ -446,38 +449,44 @@ fn expires(days: i64) -> String {
         .to_string()
 }
 
-/// `<arch>-<os>`, the key Calve looks up in `package.json`.
-fn platform() -> String {
-    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
-}
-
-/// Release packages: `<out>/<id>/<version>/{calve-integration.json, cic.wasm,
-/// native/<platform>/<binary>}` and `<out>/SHA256SUMS`.
-fn dist(out: &Path) -> Result {
+/// Release packages for `target`: `<out>/<id>/<version>/{calve-integration.json, cic.wasm,
+/// native/<target triple>/<binary>}` and `<out>/SHA256SUMS`.
+fn dist(out: &Path, target: &str) -> Result {
+    if !catalog::valid_target(target) {
+        return Err(format!("{target} is not a target triple").into());
+    }
     let exts = extensions()?;
-    let target = root().join("target/dist");
+    let target_dir = root().join("target/dist");
     let mut c = Command::new(env!("CARGO"));
     c.current_dir(root())
-        .args(["build", "--locked", "--release"])
+        .args(["build", "--locked", "--release", "--target", target])
         .arg("--target-dir")
-        .arg(&target);
+        .arg(&target_dir);
     for e in &exts {
         c.args(["-p", &format!("calve-ext-{e}")]);
     }
     run(&mut c)?;
     let modules: BTreeMap<String, PathBuf> = build_modules()?.into_iter().collect();
+    let exe = if target.contains("-windows") {
+        ".exe"
+    } else {
+        ""
+    };
     let mut sums = String::new();
     for e in &exts {
         let src = root().join("extensions").join(e).join("metadata.json");
         let meta: Metadata = serde_json::from_slice(&fs::read(&src)?)?;
         let dir = out.join(&meta.extension_id).join(&meta.version);
-        let native = dir.join("native").join(platform());
+        let native = dir.join("native").join(target);
         fs::create_dir_all(&native)?;
-        let bin = format!("{}{}", bin_name(e), std::env::consts::EXE_SUFFIX);
+        let bin = format!("{}{exe}", bin_name(e));
         let files = [
             (src, dir.join("calve-integration.json")),
             (modules[e].clone(), dir.join("cic.wasm")),
-            (target.join("release").join(&bin), native.join(&bin)),
+            (
+                target_dir.join(target).join("release").join(&bin),
+                native.join(&bin),
+            ),
         ];
         for (from, to) in files {
             fs::copy(&from, &to)?;
@@ -486,7 +495,7 @@ fn dist(out: &Path) -> Result {
         }
     }
     fs::write(out.join("SHA256SUMS"), sums)?;
-    println!("packages for {} in {}", platform(), out.display());
+    println!("packages for {target} in {}", out.display());
     Ok(())
 }
 
@@ -594,36 +603,42 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
         }
         let id = id.file_name().into_string().map_err(|_| "non-UTF-8 id")?;
         let index_path = format!("{id}/package.json");
-        let mut index: Value = if meta.contains_key(&index_path) {
+        let mut index: PackageIndex = if meta.contains_key(&index_path) {
             serde_json::from_slice(&fs::read(repo.join("targets").join(&index_path))?)?
         } else {
-            json!({"schema": "calve.package/1", "id": id, "versions": []})
+            PackageIndex {
+                schema: catalog::PACKAGE_SCHEMA.into(),
+                id: id.clone(),
+                versions: vec![],
+            }
         };
         for v in fs::read_dir(dist.join(&id))? {
             let vdir = v?.path();
             let version = vdir.file_name().and_then(|n| n.to_str()).ok_or("version")?;
-            let mut native = serde_json::Map::new();
+            let mut native = BTreeMap::new();
             for p in fs::read_dir(vdir.join("native"))? {
                 let pdir = p?.path();
-                let platform = pdir
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .ok_or("platform")?;
+                let target = pdir.file_name().and_then(|n| n.to_str()).ok_or("target")?;
+                if !catalog::valid_target(target) {
+                    return Err(format!("{}: not a target triple", pdir.display()).into());
+                }
                 let mut bins = fs::read_dir(&pdir)?.collect::<std::io::Result<Vec<_>>>()?;
                 let bin = bins
                     .pop()
                     .filter(|_| bins.is_empty())
-                    .ok_or("exactly one native binary per platform")?;
-                let name = bin.file_name().into_string().map_err(|_| "binary name")?;
-                // ponytail: one file name per version, so two platforms whose binaries share a
-                // name (Linux and macOS) cannot share a version yet; add per-platform file names
-                // when a second Unix platform ships.
+                    .ok_or("exactly one native binary per target")?;
+                let file = bin.file_name().into_string().map_err(|_| "binary name")?;
+                let bytes = fs::read(bin.path())?;
+                let build = NativeBuild {
+                    file: file.clone(),
+                    sha256: sha(&bytes),
+                };
                 put(
-                    format!("{id}/{version}/{name}"),
-                    fs::read(bin.path())?,
+                    catalog::native_path(&id, version, target, &file),
+                    bytes,
                     &mut meta,
                 )?;
-                native.insert(platform.into(), json!(name));
+                native.insert(target.to_owned(), build);
             }
             for f in ["cic.wasm", "calve-integration.json"] {
                 put(
@@ -632,22 +647,24 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
                     &mut meta,
                 )?;
             }
-            let versions = index["versions"]
-                .as_array_mut()
-                .ok_or("package.json versions")?;
-            let mut entry = versions
+            let mut entry = index
+                .versions
                 .iter()
-                .find(|e| e["version"] == version)
+                .find(|e| e.version == version)
                 .cloned()
-                .unwrap_or_else(|| {
-                    json!({"version": version, "kind": "cic-capable", "native": {},
-                        "cic": "cic.wasm", "metadata": "calve-integration.json"})
+                .unwrap_or_else(|| VersionEntry {
+                    version: version.into(),
+                    kind: catalog::Kind::CicCapable,
+                    native: BTreeMap::new(),
+                    cic: Some("cic.wasm".into()),
+                    metadata: Some("calve-integration.json".into()),
+                    ui: None,
                 });
-            for (p, n) in native {
-                entry["native"][p] = n;
-            }
-            versions.retain(|e| e["version"] != version);
-            versions.push(entry);
+            // A version's other targets stay; a target is never silently rebuilt (`put` refuses
+            // different bytes at the same path).
+            entry.native.extend(native);
+            index.versions.retain(|e| e.version != version);
+            index.versions.push(entry);
         }
         put(index_path, serde_json::to_vec(&index)?, &mut meta)?;
         ids.insert(id);

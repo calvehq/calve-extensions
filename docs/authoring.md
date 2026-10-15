@@ -1,7 +1,10 @@
 # Authoring an extension
 
 A Calve extension package has three parts, published together as one version in a signed TUF
-catalog (`<id>/<version>/…`, listed in `<id>/package.json`).
+catalog (`<id>/<version>/…`, listed in `<id>/package.json`). Native builds are per exact Rust
+target triple (`<id>/<version>/<triple>/<binary>`, with their sha256 in `package.json`), so builds
+for several platforms share a version without colliding; `cargo xtask dist --target <triple>`
+builds one, and Calve installs only the build for its own triple whose digest matches.
 
 ## 1. `metadata.json` → `calve-integration.json`
 
