@@ -488,7 +488,11 @@ fn dist(out: &Path, target: &str) -> Result {
                 native.join(&bin),
             ),
         ];
-        for (from, to) in files {
+        let refs = root().join("extensions").join(e).join("calve-refs.json");
+        let refs = refs
+            .is_file()
+            .then(|| (refs, dir.join("calve-refs.json")));
+        for (from, to) in files.into_iter().chain(refs) {
             fs::copy(&from, &to)?;
             let rel = to.strip_prefix(out)?.to_string_lossy().replace('\\', "/");
             sums.push_str(&format!("{}  {rel}\n", sha(&fs::read(&to)?)));
@@ -647,6 +651,10 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
                     &mut meta,
                 )?;
             }
+            let refs = vdir.join("calve-refs.json");
+            if refs.is_file() {
+                put(format!("{id}/{version}/calve-refs.json"), fs::read(&refs)?, &mut meta)?;
+            }
             let mut entry = index
                 .versions
                 .iter()
@@ -659,7 +667,9 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
                     cic: Some("cic.wasm".into()),
                     metadata: Some("calve-integration.json".into()),
                     ui: None,
+                    refs: None,
                 });
+            entry.refs = refs.is_file().then(|| "calve-refs.json".to_owned());
             // A version's other targets stay; a target is never silently rebuilt (`put` refuses
             // different bytes at the same path).
             entry.native.extend(native);

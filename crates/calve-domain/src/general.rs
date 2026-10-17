@@ -8,6 +8,8 @@ use serde_json::{Map, Value, json};
 
 pub const ID: &str = "org.calve.general";
 pub const WRITE_ACTION: &str = "org.calve.general.write";
+/// The `calve.refs/1` document; its SHA-256 is bound in the native manifest.
+pub const REFS: &str = include_str!("../../../extensions/general/calve-refs.json");
 const MAX_TEXT: usize = 64 * 1024;
 const MAX_ITEMS: usize = 500;
 
@@ -231,7 +233,11 @@ pub fn serve() -> std::process::ExitCode {
                 evaluator_kinds: vec![],
                 composition_validators: vec![],
                 host_capabilities: vec![],
-                schemas: Default::default(),
+                schemas: [(
+                    calve_integration_contract::refs::SCHEMA.to_owned(),
+                    openaevc::crypto::sha256(REFS.as_bytes()),
+                )]
+                .into(),
                 execution_modes: vec!["subprocess".into()],
                 entrypoint: Entrypoint {
                     command: "calve_ext_general".into(),
@@ -294,6 +300,17 @@ mod tests {
             payload,
             preconditions: vec![],
             outputs: vec![],
+        }
+    }
+
+    #[test]
+    fn refs_document_declares_every_effect_kind() {
+        let refs =
+            calve_integration_contract::refs::parse(&serde_json::from_str(REFS).unwrap()).unwrap();
+        for (_, _, effects) in KINDS {
+            for k in *effects {
+                assert!(refs.contains_key(*k), "{k}");
+            }
         }
     }
 
