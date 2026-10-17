@@ -1,0 +1,18 @@
+{
+  "kinds": {
+    "org.calve.general.artifact.attach": [
+      {
+        "edge": "ExternalCommitment",
+        "pointer": "/digest"
+      }
+    ],
+    "org.calve.general.artifact.detach": [],
+    "org.calve.general.checklist.remove": [],
+    "org.calve.general.checklist.set": [],
+    "org.calve.general.note.remove": [],
+    "org.calve.general.note.set": [],
+    "org.calve.general.record.remove": [],
+    "org.calve.general.record.set": []
+  },
+  "schema": "calve.refs/1"
+}

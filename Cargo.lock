@@ -9,6 +9,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "aho-corasick"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "ambient-authority"
 version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -245,7 +254,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "calve-api"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=ef8158ae0fa3c0a3862270ac925b591561b0b810#ef8158ae0fa3c0a3862270ac925b591561b0b810"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
 dependencies = [
  "clap",
  "openaevc",
@@ -257,8 +266,9 @@ dependencies = [
 [[package]]
 name = "calve-app"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=ef8158ae0fa3c0a3862270ac925b591561b0b810#ef8158ae0fa3c0a3862270ac925b591561b0b810"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
 dependencies = [
+ "aho-corasick",
  "base64 0.22.1",
  "calve-api",
  "calve-integration-contract",
@@ -287,6 +297,7 @@ dependencies = [
  "wasmi",
  "wasmi_core",
  "wasmparser 0.261.0",
+ "zeroize",
 ]
 
 [[package]]
@@ -467,7 +478,7 @@ dependencies = [
 [[package]]
 name = "calve-integration-contract"
 version = "1.0.0-alpha.1"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=ef8158ae0fa3c0a3862270ac925b591561b0b810#ef8158ae0fa3c0a3862270ac925b591561b0b810"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
 dependencies = [
  "serde",
  "serde_json",
@@ -477,7 +488,7 @@ dependencies = [
 [[package]]
 name = "calve-testkit"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=ef8158ae0fa3c0a3862270ac925b591561b0b810#ef8158ae0fa3c0a3862270ac925b591561b0b810"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
 dependencies = [
  "aws-lc-rs",
  "calve-integration-contract",
@@ -495,7 +506,7 @@ dependencies = [
 [[package]]
 name = "calve-win-sec"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=ef8158ae0fa3c0a3862270ac925b591561b0b810#ef8158ae0fa3c0a3862270ac925b591561b0b810"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
 dependencies = [
  "windows-sys 0.59.0",
 ]

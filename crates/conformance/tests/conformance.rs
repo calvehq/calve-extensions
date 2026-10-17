@@ -171,7 +171,12 @@ fn scenario(make: fn(&[u8]) -> Box<dyn Driver>, name: &str) -> Vec<Transcript> {
         assert_eq!(d["hunks"][0]["lines"], json!([" a", "-b", "+c"]));
         out.push(s.transcript.take().unwrap());
 
-        let (base, work) = cic::scenario(40);
+        let (base, mut work) = cic::scenario(40);
+        // Files over the inline limit are chunked by the host; only those over FILE_MAX are
+        // refused.
+        for e in work.iter_mut().filter(|e| e.path.starts_with("big/")) {
+            e.size = Some(calve_integration_contract::content::FILE_MAX + 1);
+        }
         let mut s = open(make, name);
         let (ops, captured) = cic::capture(&mut s, &base, &work, json!({}), 7).expect("capture");
         assert_eq!(captured.total_ops, ops.len() as u64);
