@@ -5,13 +5,24 @@
 //!   functions and memory, imports nothing and has no start function.
 //! - `check-contract`: one calve-cli rev everywhere, equal to the newest docs/contract-pins.md row
 //!   and to what Cargo.lock resolved (ADR 0019).
-//! - `keygen --keys DIR`: new ed25519 role keys, refused inside any git worktree.
+//! - `keygen --keys DIR [--publisher-keys DIR] [--count N] [--threshold T]`: new ed25519 keys
+//!   for the four top-level roles and for the first-party publisher role (`calve`, N keys,
+//!   threshold T; default 3 and 2; `<keys>/calve` unless `--publisher-keys`), refused inside
+//!   any git worktree.
+//! - `rotate --keys DIR --role ROLE [--publisher-keys DIR]`: retires the key(s) of a top-level
+//!   role or of the publisher (`calve`) to `retired/` and creates new ones; the next `publish`
+//!   signs with them (a new `root.json` version, cross-signed by the old root key, when a
+//!   top-level key changed; a new delegation when the publisher's keys changed).
 //! - `dist --out DIR [--target TRIPLE]`: release packages for one exact target triple (default
 //!   this host's), with `SHA256SUMS`.
 //! - `sbom OUT`: CycloneDX SBOM of every locked dependency.
-//! - `publish --keys DIR --dist DIR --repo DIR [--resume]`: a new TUF repository version.
-//!   Everything is staged first and committed file by file, `timestamp.json` last, so a crash
-//!   never exposes a partial version; `--resume` finishes an interrupted commit.
+//! - `publish --keys DIR --dist DIR --repo DIR [--publisher-keys DIR] [--resume]`: a new TUF
+//!   repository version. Packages are signed by the delegated first-party publisher role
+//!   (ADR 0021): top-level `targets` signs only `index.json`, `id-policy.json` and the
+//!   delegation (terminating, explicit `<id>/…` paths per first-party id, the publisher's keys
+//!   and threshold); every id must start with the publisher's id prefix. Everything is staged
+//!   first and committed file by file, `timestamp.json` last, so a crash never exposes a
+//!   partial version; `--resume` finishes an interrupted commit.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -27,7 +38,10 @@ use sha2::{Digest, Sha256};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR | dist --out DIR [--target TRIPLE] | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--resume]>";
+const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR [--publisher-keys DIR] [--count N] [--threshold T] | rotate --keys DIR --role ROLE [--publisher-keys DIR] | dist --out DIR [--target TRIPLE] | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--publisher-keys DIR] [--resume]>";
+/// The first-party publisher: its delegated role name and the ids it may publish.
+const PUBLISHER_ROLE: &str = "calve";
+const PUBLISHER_PREFIX: &str = "org.calve.";
 const ROLES: [&str; 4] = ["root", "targets", "snapshot", "timestamp"];
 const ABI_EXPORTS: [&str; 6] = [
     "memory",
@@ -47,9 +61,25 @@ fn main() {
     let result = match args.first().map(String::as_str) {
         Some("check-architecture") => check_architecture(),
         Some("check-contract") => check_contract(),
-        Some("keygen") => flag("--keys")
-            .ok_or_else(|| USAGE.into())
-            .and_then(|k| keygen(&k)),
+        Some("keygen") => flag("--keys").ok_or_else(|| USAGE.into()).and_then(|k| {
+            let number = |name: &str, default: usize| -> Result<usize> {
+                flag(name).map_or(Ok(default), |v| Ok(v.to_string_lossy().parse()?))
+            };
+            let pubdir = flag("--publisher-keys").unwrap_or_else(|| k.join(PUBLISHER_ROLE));
+            keygen(
+                &k,
+                &pubdir,
+                number("--count", 3)?,
+                number("--threshold", 2)?,
+            )
+        }),
+        Some("rotate") => match (flag("--keys"), flag("--role")) {
+            (Some(k), Some(r)) => {
+                let pubdir = flag("--publisher-keys").unwrap_or_else(|| k.join(PUBLISHER_ROLE));
+                rotate(&k, &pubdir, &r.to_string_lossy())
+            }
+            _ => Err(USAGE.into()),
+        },
         Some("dist") => flag("--out").ok_or_else(|| USAGE.into()).and_then(|o| {
             let target = flag("--target").map(|t| t.to_string_lossy().into_owned());
             dist(&o, target.as_deref().unwrap_or(catalog::HOST_TARGET))
@@ -57,7 +87,8 @@ fn main() {
         Some("sbom") if args.len() == 2 => sbom(Path::new(&args[1])),
         Some("publish") => match (flag("--keys"), flag("--dist"), flag("--repo")) {
             (Some(k), Some(d), Some(r)) => {
-                publish(&k, &d, &r, args.iter().any(|a| a == "--resume"))
+                let pubdir = flag("--publisher-keys").unwrap_or_else(|| k.join(PUBLISHER_ROLE));
+                publish(&k, &pubdir, &d, &r, args.iter().any(|a| a == "--resume"))
             }
             _ => Err(USAGE.into()),
         },
@@ -383,10 +414,16 @@ fn refuse_in_worktree(dir: &Path) -> Result {
     Ok(())
 }
 
-fn keygen(dir: &Path) -> Result {
+fn keygen(dir: &Path, pubdir: &Path, count: usize, threshold: usize) -> Result {
     refuse_in_worktree(dir)?;
-    if dir.exists() && fs::read_dir(dir)?.next().is_some() {
-        return Err(format!("{} is not empty; refusing to overwrite keys", dir.display()).into());
+    refuse_in_worktree(pubdir)?;
+    if threshold == 0 || threshold > count {
+        return Err(format!("threshold {threshold} must be 1..={count}").into());
+    }
+    for d in [dir, pubdir] {
+        if d.exists() && fs::read_dir(d)?.next().is_some() {
+            return Err(format!("{} is not empty; refusing to overwrite keys", d.display()).into());
+        }
     }
     fs::create_dir_all(dir)?;
     restrict(dir)?;
@@ -397,7 +434,96 @@ fn keygen(dir: &Path) -> Result {
         restrict(&path)?;
         println!("{role}: key id {}", key_id(&key));
     }
+    fs::create_dir_all(pubdir)?;
+    restrict(pubdir)?;
+    let config =
+        json!({"role": PUBLISHER_ROLE, "threshold": threshold, "id_prefix": PUBLISHER_PREFIX});
+    fs::write(
+        pubdir.join("publisher.json"),
+        serde_json::to_vec_pretty(&config)?,
+    )?;
+    new_publisher_keys(pubdir, count)
+}
+
+fn new_publisher_keys(pubdir: &Path, count: usize) -> Result {
+    for i in 1..=count {
+        let key = SigningKey::generate(&mut rand_core::OsRng);
+        let path = pubdir.join(format!("{}-{i}.key", &key_id(&key)[..16]));
+        fs::write(&path, hex(&key.to_bytes()))?;
+        restrict(&path)?;
+        println!("{PUBLISHER_ROLE}: key id {}", key_id(&key));
+    }
     Ok(())
+}
+
+/// Moves `key` into `<dir>/retired/<key id>.key` (kept: an old root key cross-signs the next
+/// root version; retired publisher keys are kept for audit only).
+fn retire(dir: &Path, key: &Path) -> Result {
+    let k = load_key_file(key)?;
+    let retired = dir.join("retired");
+    fs::create_dir_all(&retired)?;
+    restrict(&retired)?;
+    fs::rename(key, retired.join(format!("{}.key", key_id(&k))))?;
+    Ok(())
+}
+
+fn rotate(dir: &Path, pubdir: &Path, role: &str) -> Result {
+    refuse_in_worktree(dir)?;
+    if ROLES.contains(&role) {
+        retire(dir, &dir.join(format!("{role}.key")))?;
+        let key = SigningKey::generate(&mut rand_core::OsRng);
+        let path = dir.join(format!("{role}.key"));
+        fs::write(&path, hex(&key.to_bytes()))?;
+        restrict(&path)?;
+        println!("{role}: new key id {}", key_id(&key));
+        return Ok(());
+    }
+    if role != PUBLISHER_ROLE {
+        return Err(format!("unknown role {role}").into());
+    }
+    let old = publisher_key_files(pubdir)?;
+    for f in &old {
+        retire(pubdir, f)?;
+    }
+    new_publisher_keys(pubdir, old.len())
+}
+
+fn publisher_key_files(pubdir: &Path) -> Result<Vec<PathBuf>> {
+    let mut out = vec![];
+    for e in fs::read_dir(pubdir)? {
+        let p = e?.path();
+        if p.is_file() && p.extension().is_some_and(|x| x == "key") {
+            out.push(p);
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+/// The publisher's active keys and configuration (`publisher.json`).
+fn load_publisher(pubdir: &Path) -> Result<(Vec<SigningKey>, usize, String)> {
+    let config: Value = serde_json::from_slice(&fs::read(pubdir.join("publisher.json"))?)?;
+    if config["role"] != PUBLISHER_ROLE {
+        return Err(format!("publisher.json must name role {PUBLISHER_ROLE}").into());
+    }
+    let threshold = config["threshold"]
+        .as_u64()
+        .ok_or("publisher.json: threshold")? as usize;
+    let prefix = config["id_prefix"]
+        .as_str()
+        .ok_or("publisher.json: id_prefix")?;
+    let keys = publisher_key_files(pubdir)?
+        .iter()
+        .map(|f| load_key_file(f))
+        .collect::<Result<Vec<_>>>()?;
+    if threshold == 0 || keys.len() < threshold {
+        return Err(format!(
+            "the publisher has {} keys for threshold {threshold}",
+            keys.len()
+        )
+        .into());
+    }
+    Ok((keys, threshold, prefix.to_owned()))
 }
 
 #[cfg(unix)]
@@ -413,7 +539,12 @@ fn restrict(_: &Path) -> Result {
 }
 
 fn load_key(dir: &Path, role: &str) -> Result<SigningKey> {
-    let text = fs::read_to_string(dir.join(format!("{role}.key")))?;
+    load_key_file(&dir.join(format!("{role}.key")))
+}
+
+fn load_key_file(path: &Path) -> Result<SigningKey> {
+    let role = path.display();
+    let text = fs::read_to_string(path)?;
     let text = text.trim();
     let bytes: Vec<u8> = (0..text.len())
         .step_by(2)
@@ -436,10 +567,22 @@ fn key_id(k: &SigningKey) -> String {
 
 /// Signed envelope over the canonical form; written pretty-printed (clients hash the bytes).
 fn envelope(signed: &Value, k: &SigningKey) -> Result<Vec<u8>> {
+    envelope_by(signed, &[k])
+}
+
+/// Signed by every key in `keys` (distinct key ids).
+fn envelope_by(signed: &Value, keys: &[&SigningKey]) -> Result<Vec<u8>> {
     let c = jcs::to_vec(signed).map_err(|_| "metadata must be integer-only")?;
-    let sig = hex(&k.sign(&c).to_bytes());
+    let mut sigs: BTreeMap<String, String> = BTreeMap::new();
+    for k in keys {
+        sigs.insert(key_id(k), hex(&k.sign(&c).to_bytes()));
+    }
+    let sigs: Vec<Value> = sigs
+        .into_iter()
+        .map(|(keyid, sig)| json!({"keyid": keyid, "sig": sig}))
+        .collect();
     Ok(serde_json::to_vec_pretty(
-        &json!({"signed": signed, "signatures": [{"keyid": key_id(k), "sig": sig}]}),
+        &json!({"signed": signed, "signatures": sigs}),
     )?)
 }
 
@@ -489,9 +632,7 @@ fn dist(out: &Path, target: &str) -> Result {
             ),
         ];
         let refs = root().join("extensions").join(e).join("calve-refs.json");
-        let refs = refs
-            .is_file()
-            .then(|| (refs, dir.join("calve-refs.json")));
+        let refs = refs.is_file().then(|| (refs, dir.join("calve-refs.json")));
         for (from, to) in files.into_iter().chain(refs) {
             fs::copy(&from, &to)?;
             let rel = to.strip_prefix(out)?.to_string_lossy().replace('\\', "/");
@@ -539,55 +680,120 @@ fn read_signed(repo: &Path, file: &str) -> Result<Option<Value>> {
     Ok(Some(v["signed"].clone()))
 }
 
+/// Top-level documents (catalog conventions, calve-cli `catalog::install`); every other target
+/// is a package file and belongs to the publisher role.
+const TOP_LEVEL_TARGETS: [&str; 3] = ["index.json", "id-policy.json", "revocations.json"];
+
+/// The next root version when a top-level key changed: listing the current keys and signed by
+/// the new root key and by every key the previous root named for `root` (an old root key is
+/// found among the active keys or in `retired/`), so clients verify the rotation (TUF §5.3.4).
+fn next_root(
+    keys: &Path,
+    current: &Value,
+    k: &BTreeMap<&str, SigningKey>,
+) -> Result<Option<(u64, Vec<u8>)>> {
+    let changed = ROLES
+        .iter()
+        .any(|r| current["roles"][*r]["keyids"] != json!([key_id(&k[r])]));
+    if !changed {
+        return Ok(None);
+    }
+    let version = current["version"].as_u64().ok_or("root.json: version")? + 1;
+    let mut signers: Vec<SigningKey> = vec![k["root"].clone()];
+    for id in current["roles"]["root"]["keyids"]
+        .as_array()
+        .ok_or("root.json: root keyids")?
+    {
+        let id = id.as_str().ok_or("root.json: key id")?;
+        if id == key_id(&k["root"]) {
+            continue;
+        }
+        let old = keys.join("retired").join(format!("{id}.key"));
+        if !old.is_file() {
+            return Err(format!(
+                "root key {id} named by root.json v{} is neither active nor in retired/",
+                version - 1
+            )
+            .into());
+        }
+        signers.push(load_key_file(&old)?);
+    }
+    let signed = root_signed(version, k);
+    let refs: Vec<&SigningKey> = signers.iter().collect();
+    Ok(Some((version, envelope_by(&signed, &refs)?)))
+}
+
+fn root_signed(version: u64, k: &BTreeMap<&str, SigningKey>) -> Value {
+    let keys: serde_json::Map<String, Value> =
+        k.values().map(|s| (key_id(s), key_json(s))).collect();
+    let roles: serde_json::Map<String, Value> = ROLES
+        .iter()
+        .map(|r| {
+            (
+                r.to_string(),
+                json!({"keyids": [key_id(&k[r])], "threshold": 1}),
+            )
+        })
+        .collect();
+    json!({"_type": "root", "spec_version": "1.0.31", "version": version,
+        "expires": expires(365), "consistent_snapshot": true, "keys": keys, "roles": roles})
+}
+
 /// Files of the next repository version as `(repo-relative path, bytes)`, in commit order:
-/// root (first publish only), targets blobs, then targets, snapshot and timestamp metadata.
-fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>> {
+/// root (first publish, or a rotation), targets blobs, then the publisher's delegated targets,
+/// top-level targets, snapshot and timestamp metadata.
+fn stage(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>> {
     let k: BTreeMap<&str, SigningKey> = ROLES
         .iter()
         .map(|r| Ok((*r, load_key(keys, r)?)))
         .collect::<Result<_>>()?;
+    let (publisher_keys, threshold, prefix) = load_publisher(pubdir)?;
     let mut files: Vec<(String, Vec<u8>)> = vec![];
-    // Root: created once; afterwards the keys must be the ones it names.
     match read_signed(repo, "root.json")? {
         Some(r) => {
-            for role in ROLES {
-                if r["roles"][role]["keyids"] != json!([key_id(&k[role])]) {
-                    return Err(format!("{role}.key is not the key root.json names").into());
-                }
+            if let Some((v, bytes)) = next_root(keys, &r, &k)? {
+                files.push((format!("metadata/{v}.root.json"), bytes.clone()));
+                files.push(("metadata/root.json".into(), bytes));
             }
         }
         None => {
-            let keys: serde_json::Map<String, Value> =
-                k.values().map(|s| (key_id(s), key_json(s))).collect();
-            let roles: serde_json::Map<String, Value> = ROLES
-                .iter()
-                .map(|r| {
-                    (
-                        r.to_string(),
-                        json!({"keyids": [key_id(&k[r])], "threshold": 1}),
-                    )
-                })
-                .collect();
-            let signed = json!({"_type": "root", "spec_version": "1.0.31", "version": 1,
-                "expires": expires(365), "consistent_snapshot": true, "keys": keys, "roles": roles});
-            let bytes = envelope(&signed, &k["root"])?;
+            let bytes = envelope(&root_signed(1, &k), &k["root"])?;
             files.push(("metadata/1.root.json".into(), bytes.clone()));
             files.push(("metadata/root.json".into(), bytes));
         }
     }
+    let delegated = format!("{PUBLISHER_ROLE}.json");
     let mut version = 0;
-    for f in ["targets.json", "snapshot.json", "timestamp.json"] {
+    for f in [
+        "targets.json",
+        delegated.as_str(),
+        "snapshot.json",
+        "timestamp.json",
+    ] {
         let v = read_signed(repo, f)?.map_or(0, |s| s["version"].as_u64().unwrap_or(0));
         version = version.max(v);
     }
     version += 1;
-    let mut meta: serde_json::Map<String, Value> = read_signed(repo, "targets.json")?
-        .and_then(|p| p["targets"].as_object().cloned())
-        .unwrap_or_default();
+    // Existing entries: top-level documents stay top-level; package files (including any a
+    // pre-delegation repository signed with top-level `targets`) move to the publisher role.
+    let mut top = serde_json::Map::new();
+    let mut meta = serde_json::Map::new();
+    for f in ["targets.json", delegated.as_str()] {
+        for (path, entry) in read_signed(repo, f)?
+            .and_then(|p| p["targets"].as_object().cloned())
+            .unwrap_or_default()
+        {
+            if TOP_LEVEL_TARGETS.contains(&path.as_str()) {
+                top.insert(path, entry);
+            } else {
+                meta.insert(path, entry);
+            }
+        }
+    }
     let mut blobs: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut put = |path: String, bytes: Vec<u8>, meta: &mut serde_json::Map<String, Value>| {
         let entry = json!({"length": bytes.len(), "hashes": {"sha256": sha(&bytes)}});
-        let index = path.ends_with("/package.json") || path == "index.json";
+        let index = path.ends_with("/package.json") || TOP_LEVEL_TARGETS.contains(&path.as_str());
         if !index && meta.get(&path).is_some_and(|old| *old != entry) {
             return Err(format!("{path} is already published with other content").into());
         }
@@ -606,6 +812,18 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
             continue;
         }
         let id = id.file_name().into_string().map_err(|_| "non-UTF-8 id")?;
+        // The publisher may publish only its own ids; ids also become delegation path
+        // patterns, so no glob characters.
+        if !id.starts_with(&prefix)
+            || !id
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-')
+        {
+            return Err(format!(
+                "{id}: the {PUBLISHER_ROLE} publisher may publish only ids starting with {prefix} ([a-z0-9.-])"
+            )
+            .into());
+        }
         let index_path = format!("{id}/package.json");
         let mut index: PackageIndex = if meta.contains_key(&index_path) {
             serde_json::from_slice(&fs::read(repo.join("targets").join(&index_path))?)?
@@ -653,7 +871,11 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
             }
             let refs = vdir.join("calve-refs.json");
             if refs.is_file() {
-                put(format!("{id}/{version}/calve-refs.json"), fs::read(&refs)?, &mut meta)?;
+                put(
+                    format!("{id}/{version}/calve-refs.json"),
+                    fs::read(&refs)?,
+                    &mut meta,
+                )?;
             }
             let mut entry = index
                 .versions
@@ -680,7 +902,13 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
         ids.insert(id);
     }
     let index = json!({"schema": "calve.index/1", "ids": ids});
-    put("index.json".into(), serde_json::to_vec(&index)?, &mut meta)?;
+    put("index.json".into(), serde_json::to_vec(&index)?, &mut top)?;
+    let policy = json!({"roles": {PUBLISHER_ROLE: [prefix]}});
+    put(
+        "id-policy.json".into(),
+        serde_json::to_vec(&policy)?,
+        &mut top,
+    )?;
     // Consistent snapshots: each target also under `<sha256>.<name>`.
     for (path, bytes) in blobs {
         let (dir, name) = path.rsplit_once('/').unwrap_or(("", &path));
@@ -695,16 +923,49 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
         ));
         files.push((format!("targets/{path}"), bytes));
     }
-    let targets = envelope(
+    // The publisher's role: every package file, signed by all its active keys (≥ threshold).
+    let refs: Vec<&SigningKey> = publisher_keys.iter().collect();
+    let role_meta = envelope_by(
         &json!({"_type": "targets", "spec_version": "1.0.31", "version": version,
             "expires": expires(90), "targets": meta}),
+        &refs,
+    )?;
+    files.push((format!("metadata/{version}.{delegated}"), role_meta.clone()));
+    files.push((format!("metadata/{delegated}"), role_meta));
+    // Role-scoped: explicit paths for exactly the published first-party ids (`*` never
+    // crosses `/` in TUF patterns, so one pattern per depth of the package layout).
+    let paths: Vec<String> = ids
+        .iter()
+        .flat_map(|id| {
+            [
+                format!("{id}/*"),
+                format!("{id}/*/*"),
+                format!("{id}/*/*/*"),
+            ]
+        })
+        .collect();
+    let delegation_keys: serde_json::Map<String, Value> = publisher_keys
+        .iter()
+        .map(|s| (key_id(s), key_json(s)))
+        .collect();
+    let delegation = json!({"keys": delegation_keys, "roles": [{
+        "name": PUBLISHER_ROLE,
+        "keyids": publisher_keys.iter().map(key_id).collect::<Vec<_>>(),
+        "threshold": threshold,
+        "terminating": true,
+        "paths": paths,
+    }]});
+    let targets = envelope(
+        &json!({"_type": "targets", "spec_version": "1.0.31", "version": version,
+            "expires": expires(90), "targets": top, "delegations": delegation}),
         &k["targets"],
     )?;
     files.push((format!("metadata/{version}.targets.json"), targets.clone()));
     files.push(("metadata/targets.json".into(), targets));
     let snapshot = envelope(
         &json!({"_type": "snapshot", "spec_version": "1.0.31", "version": version,
-            "expires": expires(30), "meta": {"targets.json": {"version": version}}}),
+            "expires": expires(30), "meta": {"targets.json": {"version": version},
+                delegated.clone(): {"version": version}}}),
         &k["snapshot"],
     )?;
     files.push((
@@ -722,8 +983,9 @@ fn stage(keys: &Path, dist: &Path, repo: &Path) -> Result<Vec<(String, Vec<u8>)>
     Ok(files)
 }
 
-fn publish(keys: &Path, dist: &Path, repo: &Path, resume: bool) -> Result {
+fn publish(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path, resume: bool) -> Result {
     refuse_in_worktree(keys)?;
+    refuse_in_worktree(pubdir)?;
     let staging = repo.join(".publish");
     let order = staging.join("order.json");
     match (order.exists(), resume) {
@@ -735,7 +997,7 @@ fn publish(keys: &Path, dist: &Path, repo: &Path, resume: bool) -> Result {
         (false, false) => {
             // A crash while staging committed nothing, so leftovers are discarded.
             let _ = fs::remove_dir_all(&staging);
-            let files = stage(keys, dist, repo)?;
+            let files = stage(keys, pubdir, dist, repo)?;
             fs::create_dir_all(&staging)?;
             for (i, (_, bytes)) in files.iter().enumerate() {
                 fs::write(staging.join(i.to_string()), bytes)?;
