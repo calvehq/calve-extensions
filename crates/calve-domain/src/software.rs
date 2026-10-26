@@ -210,7 +210,8 @@ mod native {
             .ok_or("payload must be an object")?;
         if effect.kind == SNAPSHOT_CHUNKED {
             // Structure and limits; Calve verifies the blobs, which an extension cannot read.
-            let (digest, size) = calve_integration_contract::content::validate_chunked(&effect.payload)?;
+            let (digest, size) =
+                calve_integration_contract::content::validate_chunked(&effect.payload)?;
             return Ok((Some(digest.parse().map_err(|_| "invalid digest")?), size));
         }
         if effect.kind == DELETE {
@@ -589,8 +590,9 @@ mod native {
             short["size"] = json!(size - 1);
             assert!(inspect(&effect(SNAPSHOT_CHUNKED, "big.bin", short)).is_err());
             // Every effect kind is declared in the refs document the manifest binds.
-            let refs = calve_integration_contract::refs::parse(&serde_json::from_str(REFS).unwrap())
-                .unwrap();
+            let refs =
+                calve_integration_contract::refs::parse(&serde_json::from_str(REFS).unwrap())
+                    .unwrap();
             let m = Software.manifest();
             assert_eq!(
                 m.schemas[calve_integration_contract::refs::SCHEMA],
@@ -692,7 +694,10 @@ mod tests {
         );
         // Over the inline limit the host chunks; only files over FILE_MAX are refused.
         let chunked = file("a", "33", MAX_CONTENT + 1);
-        assert!(matches!(op(Some(&a), Some(&chunked)), CaptureOp::Modify { .. }));
+        assert!(matches!(
+            op(Some(&a), Some(&chunked)),
+            CaptureOp::Modify { .. }
+        ));
         let big = file("a", "33", calve_integration_contract::content::FILE_MAX + 1);
         assert!(matches!(op(Some(&a), Some(&big)), CaptureOp::Refuse { .. }));
         let mut link = a.clone();
