@@ -1029,3 +1029,30 @@ fn publish(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path, resume: bool) -
     );
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Plan §49 rule 6: an extension package links its domain crates, never Calve's daemon.
+    #[test]
+    fn extensions_cannot_link_private_calve_crates() {
+        for package in ["calve-ext-x", "calve-cic-x"] {
+            let allowed = allowed_deps(package).unwrap();
+            assert!(allowed.contains(&"calve-domain"));
+            for private in [
+                "calve-app",
+                "calve-client",
+                "calve-ipc",
+                "calve-api",
+                "calved",
+            ] {
+                assert!(!allowed.contains(&private), "{package} -> {private}");
+            }
+        }
+        assert!(
+            allowed_deps("calve-app").is_none(),
+            "unknown packages have no allowlist"
+        );
+    }
+}
