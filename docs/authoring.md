@@ -14,7 +14,9 @@ beyond them (schema `calve.integration/1`):
 - `extension_id`, `version`, `display_name`, `abi`, `cic` (supported CIC ranges), `schema`;
 - `capabilities.required` / `optional` and `ops`: the CIC operations the module implements
   (`describe`, `detect`, `check_plan`, `classify`, `capture`, `relate`, `diff`);
-- `files` (a file domain): the resource kind, the `put`/`delete` effect kinds, kinds still
+- `files` (a file domain): the resource kind, the `put`/`delete` effect kinds, an optional
+  `put_chunked` kind for files too large to store inline (its objects must be classified in a
+  `calve.refs/1` document, or Calve refuses with `CLOSURE_UNCLASSIFIED`), kinds still
   valid only in recorded `history`, the write action, verifier, evaluator and `ignore_files`;
 - `resources`: non-file kinds edited with `calve resource set <short>:<name>=JSON`;
 - `checks`: the verifier that judges Calve's check evidence (requires `detect` and

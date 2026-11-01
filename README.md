@@ -30,8 +30,8 @@ calve extension enable org.calve.software --acknowledge-native
 ## Development
 
 The Calve Integration Contract and Calve's host crates come from calve-cli at one pinned commit
-([docs/contract-pins.md](docs/contract-pins.md), ADR 0019). While that commit is not public,
-`source scripts/dev-env.sh <path to a calve-cli checkout>` fetches it locally.
+([docs/contract-pins.md](docs/contract-pins.md), ADR 0019). To build against a local
+checkout, `source scripts/dev-env.sh <path to a calve-cli checkout>`.
 
 ```sh
 cargo xtask check-contract      # one calve-cli rev, matching docs/contract-pins.md and Cargo.lock

@@ -49,8 +49,7 @@ The old key(s) move to `retired/` and new ones are created; the next `publish` u
 
 ## Verification
 
-`~/calve-scripts/delegation.sh` (maintainer machine) publishes with these commands and checks
-the result with the real calve client: install through the role, threshold met and not met,
+Publishing has been checked against the real calve client: install through the role, threshold met and not met,
 a target outside the delegated paths, an id outside the prefix, publisher rotation (existing
 client, new install, retired keys refused) and root/timestamp rotation (existing and fresh
 clients).
