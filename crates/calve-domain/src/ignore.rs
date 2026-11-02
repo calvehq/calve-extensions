@@ -322,4 +322,28 @@ mod tests {
         assert!(IgnoreRules::parse_source("\\", "x", "").is_err());
         assert!(IgnoreRules::parse_source(&"a\n".repeat(600), "x", "").is_err());
     }
+
+    proptest::proptest! {
+        /// §48.2: the last matching rule wins whatever comes before it: a later negation of any
+        /// rule undoes it for that path.
+        #[test]
+        fn the_last_matching_rule_wins(
+            name in "[a-z]{1,6}(/[a-z]{1,6}){0,2}",
+            noise in proptest::collection::vec("[a-z*]{1,6}", 0..4),
+        ) {
+            let leading = noise.join("\n");
+            let decide = |text: String| {
+                super::IgnoreRules::parse_source(&text, ".calveignore", "")
+                    .unwrap()
+                    .decide(&name, false)
+                    .ignored
+            };
+            let (ignored, kept) = (
+                format!("{leading}\n/{name}\n"),
+                format!("{leading}\n/{name}\n!/{name}\n"),
+            );
+            proptest::prop_assert!(decide(ignored));
+            proptest::prop_assert!(!decide(kept));
+        }
+    }
 }
