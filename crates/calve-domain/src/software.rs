@@ -868,4 +868,38 @@ mod tests {
             .is_err()
         );
     }
+
+    /// Boundaries cargo-mutants found unkilled: a file of exactly FILE_MAX is captured, one
+    /// byte more is refused; a diff side of exactly MAX_DIFF_SIDE is diffed, and either side
+    /// over it is too large.
+    #[test]
+    fn capture_and_diff_limits_are_exact() {
+        use base64::Engine;
+        let max = calve_integration_contract::content::FILE_MAX;
+        let at = file("a", "44", max);
+        assert!(matches!(
+            capture_op(&tuple(None, Some(at))).unwrap(),
+            CaptureOp::Add { .. }
+        ));
+        let over = file("a", "44", max + 1);
+        assert!(matches!(
+            capture_op(&tuple(None, Some(over))).unwrap(),
+            CaptureOp::Refuse { .. }
+        ));
+        let b = |s: &[u8]| Some(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s));
+        let d = |before, after| {
+            diff(DiffIn {
+                path: "f".into(),
+                before,
+                after,
+                context: 1,
+            })
+            .unwrap()
+        };
+        let side = vec![b'a'; MAX_DIFF_SIDE as usize];
+        let longer = vec![b'a'; MAX_DIFF_SIDE as usize + 1];
+        assert!(matches!(d(b(&side), b(&side)), DiffOut::Hunks { .. }));
+        assert_eq!(d(None, b(&longer)), DiffOut::TooLarge);
+        assert_eq!(d(b(b"x"), b(&longer)), DiffOut::TooLarge);
+    }
 }
