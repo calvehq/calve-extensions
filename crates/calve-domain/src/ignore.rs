@@ -317,6 +317,48 @@ mod tests {
         );
     }
 
+    /// Limits hold exactly at their bound, and `*`, `?` and literals stay within what they
+    /// should match (each assertion kills a mutant cargo-mutants found unkilled).
+    #[test]
+    fn limits_are_exact_and_wildcards_stay_in_their_segment() {
+        let parse = |t: &str| IgnoreRules::parse_source(t, "x", "");
+        // File size: 64 KiB exactly is accepted, one byte more is not.
+        let at = format!("{}\n", "#".repeat(MAX_FILE_BYTES - 1));
+        assert_eq!(at.len(), MAX_FILE_BYTES);
+        assert!(parse(&at).is_ok());
+        assert!(parse(&format!("#{at}")).is_err());
+        assert!(parse(&format!("{}\n", "#".repeat(2000))).is_ok());
+        // Rule count: 512 accepted, 513 refused.
+        assert!(parse(&"a\n".repeat(MAX_RULES)).is_ok());
+        assert!(parse(&"a\n".repeat(MAX_RULES + 1)).is_err());
+        // Pattern length: 512 characters accepted, 513 refused; an empty pattern is refused.
+        assert!(parse(&"a".repeat(MAX_PATTERN_CHARS)).is_ok());
+        assert!(parse(&"a".repeat(MAX_PATTERN_CHARS + 1)).is_err());
+        for empty in ["/", "!", "!/"] {
+            assert!(parse(empty).is_err(), "{empty:?}");
+        }
+        let ignored =
+            |pattern: &str, path: &str| parse(pattern).unwrap().decide(path, false).ignored;
+        // Literals.
+        assert!(ignored("/abc", "abc"));
+        assert!(!ignored("/abc", "abd"));
+        assert!(!ignored("/abc", "xbc"));
+        // `?` is one character, never a separator.
+        assert!(ignored("/a?c", "abc"));
+        assert!(!ignored("/a?c", "xbc"));
+        assert!(!ignored("/a?c", "a/c"));
+        // `*` stays in its segment; `**` crosses separators.
+        assert!(ignored("/a*c", "abbc"));
+        assert!(!ignored("/a*c", "ab/c"));
+        assert!(!ignored("/a*c", "xbc"));
+        assert!(ignored("/a**c", "ab/c"));
+        // `**/` matches whole directories only: zero or more, never part of a name.
+        assert!(ignored("/a/**/b", "a/b"));
+        assert!(ignored("/a/**/b", "a/x/y/b"));
+        assert!(!ignored("/a/**/b", "a/xb"));
+        assert!(!ignored("/a*", "b"));
+    }
+
     #[test]
     fn invalid_input_is_refused() {
         assert!(IgnoreRules::parse_source("\\", "x", "").is_err());
