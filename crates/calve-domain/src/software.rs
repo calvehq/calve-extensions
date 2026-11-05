@@ -618,6 +618,184 @@ mod native {
             .unwrap_or_else(|err| panic!("AppliedEffect shape: {err}"))
         }
 
+        /// Each acceptance condition of a software effect holds on its own (mutation analysis
+        /// found conditions joined so that one violation alone slipped through).
+        #[test]
+        fn every_effect_condition_is_enforced_alone() {
+            let d = sha256(b"hi\n");
+            let put = json!({"digest": d, "size": 3, "content": "aGkK"});
+            let ok = effect(SNAPSHOT, "a.txt", put.clone());
+            assert!(inspect(&ok).is_ok());
+            let mut e = ok.clone();
+            e.kind = "org.calve.software.other".into();
+            assert!(inspect(&e).is_err(), "kind");
+            let mut e = ok.clone();
+            e.target.kind = "org.other.file".into();
+            assert!(inspect(&e).is_err(), "resource kind");
+            let mut e = ok.clone();
+            e.target.extension = "org.other".into();
+            assert!(inspect(&e).is_err(), "extension");
+            let mut e = ok.clone();
+            e.preconditions = vec![json!({})];
+            assert!(inspect(&e).is_err(), "preconditions");
+            let mut e = ok.clone();
+            e.outputs = vec![ok.target.clone()];
+            assert!(inspect(&e).is_err(), "outputs");
+            // Content must match its digest and size, each on its own.
+            let other = sha256(b"ho\n");
+            let wrong_digest = json!({"digest": other, "size": 3, "content": "aGkK"});
+            assert!(inspect(&effect(SNAPSHOT, "a.txt", wrong_digest)).is_err());
+            let wrong_size = json!({"digest": d, "size": 4, "content": "aGkK"});
+            assert!(inspect(&effect(SNAPSHOT, "a.txt", wrong_size)).is_err());
+            // The inline bound: MAX_CONTENT bytes accepted, one more refused even when
+            // digest and size agree.
+            let snap = |bytes: &[u8]| {
+                effect(
+                    SNAPSHOT,
+                    "big.bin",
+                    json!({"digest": sha256(bytes), "size": bytes.len(), "content": b64::encode(bytes)}),
+                )
+            };
+            assert!(inspect(&snap(&vec![b'a'; MAX_CONTENT as usize])).is_ok());
+            assert!(inspect(&snap(&vec![b'a'; MAX_CONTENT as usize + 1])).is_err());
+            // The encoded-length guard refuses before decoding, exactly past its bound.
+            let bound = (MAX_CONTENT * 4 / 3 + 8) as usize;
+            let encoded = |n: usize| {
+                effect(
+                    SNAPSHOT,
+                    "big.bin",
+                    json!({"digest": d, "size": 3, "content": "A".repeat(n)}),
+                )
+            };
+            let over = inspect(&encoded(bound + 1)).unwrap_err();
+            assert!(over.contains("exceeds"), "{over}");
+            let at = inspect(&encoded(bound)).unwrap_err();
+            assert!(!at.contains("exceeds"), "{at}");
+        }
+
+        /// Verifier outcomes: config shape, Inconclusive without file effects, and only the
+        /// newest effect on the expected path counts.
+        #[test]
+        fn verifier_outcomes_are_exact() {
+            let d = sha256(b"hi\n");
+            let put = json!({"digest": d, "size": 3, "content": "aGkK"});
+            let stale = json!({"digest": sha256(b"ho\n"), "size": 3, "content": "aG8K"});
+            assert!(
+                verify(Some(json!({"path": "a.txt"})), &[]).is_err(),
+                "path alone"
+            );
+            assert!(
+                verify(Some(json!({"digest": d})), &[]).is_err(),
+                "digest alone"
+            );
+            assert!(verify(Some(json!({"x": 1})), &[]).is_err(), "unknown key");
+            assert_eq!(
+                verify(None, &[]).unwrap().status,
+                VerificationStatus::Inconclusive
+            );
+            let one = [applied(effect(SNAPSHOT, "a.txt", put.clone()))];
+            assert_eq!(verify(None, &one).unwrap().status, VerificationStatus::Pass);
+            // Older mismatch, newer match: the newest wins.
+            let config = Some(json!({"path": "a.txt", "digest": d}));
+            let history = [
+                applied(effect(SNAPSHOT, "a.txt", stale.clone())),
+                applied(effect(SNAPSHOT, "a.txt", put.clone())),
+            ];
+            assert_eq!(
+                verify(config.clone(), &history).unwrap().status,
+                VerificationStatus::Pass
+            );
+            let reversed = [
+                applied(effect(SNAPSHOT, "a.txt", put)),
+                applied(effect(SNAPSHOT, "a.txt", stale)),
+            ];
+            assert_eq!(
+                verify(config.clone(), &reversed).unwrap().status,
+                VerificationStatus::Fail
+            );
+            // A newer effect on another path does not count against the expected one.
+            let at = |p: &str| {
+                applied(effect(
+                    SNAPSHOT,
+                    p,
+                    json!({"digest": d, "size": 3, "content": "aGkK"}),
+                ))
+            };
+            let mut moved = json!({"digest": d, "size": 3, "content": "aGkK"});
+            moved["from"] = json!("b.txt");
+            // ...nor does a newer rename between two other paths.
+            let elsewhere = [
+                at("a.txt"),
+                at("b.txt"),
+                applied(effect(RENAME, "c.txt", moved)),
+            ];
+            assert_eq!(
+                verify(config, &elsewhere).unwrap().status,
+                VerificationStatus::Pass
+            );
+        }
+
+        /// Evaluator thresholds are strict (`>`), counted per file and per byte, with the
+        /// documented defaults (16 files, 256 KiB) and only the two known options.
+        #[test]
+        fn evaluator_thresholds_and_metrics_are_exact() {
+            let snap = |name: &str, bytes: &[u8]| {
+                applied(effect(
+                    SNAPSHOT,
+                    name,
+                    json!({"digest": sha256(bytes), "size": bytes.len(), "content": b64::encode(bytes)}),
+                ))
+            };
+            let verdict =
+                |config: Value, effects: &[AppliedEffect]| evaluate(Some(config), effects).unwrap();
+            assert!(evaluate(Some(json!({"other": 1})), &[]).is_err());
+            assert!(evaluate(Some(json!({"warn_after_files": 1})), &[]).is_ok());
+            assert!(evaluate(Some(json!({"warn_after_bytes": 1})), &[]).is_ok());
+            assert_eq!(verdict(json!({}), &[]).verdict, EvaluationVerdict::Unknown);
+            let two = [snap("a", b"xx"), snap("b", b"yyy")];
+            let out = verdict(json!({}), &two);
+            assert_eq!(out.verdict, EvaluationVerdict::Allow);
+            assert_eq!(out.metrics["org.calve.software.changed_files"], 2);
+            assert_eq!(out.metrics["org.calve.software.changed_bytes"], 5);
+            // Files: at the threshold allowed, past it warned.
+            assert_eq!(
+                verdict(json!({"warn_after_files": 2}), &two).verdict,
+                EvaluationVerdict::Allow
+            );
+            assert_eq!(
+                verdict(json!({"warn_after_files": 1}), &two).verdict,
+                EvaluationVerdict::Warn
+            );
+            // Bytes: the same.
+            assert_eq!(
+                verdict(json!({"warn_after_bytes": 5}), &two).verdict,
+                EvaluationVerdict::Allow
+            );
+            assert_eq!(
+                verdict(json!({"warn_after_bytes": 4}), &two).verdict,
+                EvaluationVerdict::Warn
+            );
+            // Default byte threshold, 256 KiB: at it allowed, one byte past it warned.
+            let at = [snap("a", &vec![b'a'; 256 * 1024])];
+            assert_eq!(verdict(json!({}), &at).verdict, EvaluationVerdict::Allow);
+            let past = [snap("a", &vec![b'a'; 256 * 1024 + 1])];
+            assert_eq!(verdict(json!({}), &past).verdict, EvaluationVerdict::Warn);
+            // Default file threshold, 16.
+            let files = |n: usize| {
+                (0..n)
+                    .map(|i| snap(&format!("f{i}"), b"x"))
+                    .collect::<Vec<_>>()
+            };
+            assert_eq!(
+                verdict(json!({}), &files(16)).verdict,
+                EvaluationVerdict::Allow
+            );
+            assert_eq!(
+                verdict(json!({}), &files(17)).verdict,
+                EvaluationVerdict::Warn
+            );
+        }
+
         #[test]
         fn a_later_rename_away_fails_the_expected_digest() {
             let d = sha256(b"hi\n");
