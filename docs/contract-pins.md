@@ -9,6 +9,9 @@ Until that commit is public, `source scripts/dev-env.sh [path to calve-cli]` poi
 fetches at a local checkout for the current shell (`GIT_CONFIG_*` `url.<local>.insteadOf`; no
 global git configuration, and the lockfile keeps the public URL).
 
+The pinned commit must stay reachable on calve-cli's public remote: a rebase, squash merge or
+deleted branch that drops it breaks every fresh build.
+
 To move to a newer contract, run `scripts/bump-contract.sh <calve-cli commit> [calve binary]`: it
 rewrites the rev, updates the lock, runs the tests, the conformance suite, the architecture check
 and — with a calve binary — every calve-cli example against a freshly published catalog of these
@@ -21,3 +24,4 @@ pinned rev.
 | `f7f6a37b2980f982b98dd183316d2288acdb5667` | 1.0.0-alpha.1 | `bd49926bd42c21705ff845bc6096ef344fcbd233` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
 | `ef8158ae0fa3c0a3862270ac925b591561b0b810` | 1.0.0-alpha.1 | `ffcbe66d28fde2edd0a0ce35089e8a1c7e52439d` (+ this pin) | PASS (calve, all examples) | 2026-10-15 |
 | `0fb1601592571557563669096afe2fce69ba91fc` | 1.0.0-alpha.1 | `8c1239cb64e6ca9e22cf7de55a7d1bf6529d5fed` (+ this pin) | PASS (calve, all examples) | 2026-10-17 |
+| `5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7` | 1.0.0-alpha.1 | `ff8b6bc5050cd5164a0a35742e4f03195164e07c` (+ this pin) | PASS (calve, all examples) | 2026-11-10 |
