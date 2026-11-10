@@ -23,6 +23,26 @@ jobs:
         run: |
           rustup toolchain install --no-self-update
           rustc --version
+      # aws-lc-sys (TUF signature verification) assembles its x86-64 code with NASM, which the
+      # Windows image lacks; Linux builds the same code with the system assembler.
+      - name: NASM
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
+        with:
+          version: 2.16.03
+      - name: Native build prerequisites
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          nasm -v
+          if ($LASTEXITCODE -ne 0) { throw "NASM is not on PATH; aws-lc-sys cannot build" }
+          # cl.exe is found through Visual Studio discovery (as the cc crate does), not PATH.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "No Visual Studio installation with the MSVC x64 tools" }
+          "MSVC tools: $vs"
+          rustc --version
+          cargo --version
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Checks
         shell: bash
