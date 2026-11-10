@@ -14,6 +14,16 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Later steps need no git credentials: every git dependency is public.
+          persist-credentials: false
+      # rust-toolchain.toml is the only source of the version, components and targets.
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install --no-self-update
+          rustc --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Checks
         shell: bash
         run: |

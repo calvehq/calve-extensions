@@ -254,7 +254,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "calve-api"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7#5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7"
 dependencies = [
  "clap",
  "openaevc",
@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "calve-app"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7#5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7"
 dependencies = [
  "aho-corasick",
  "base64 0.22.1",
@@ -478,7 +478,7 @@ dependencies = [
 [[package]]
 name = "calve-integration-contract"
 version = "1.0.0-alpha.1"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7#5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7"
 dependencies = [
  "serde",
  "serde_json",
@@ -488,7 +488,7 @@ dependencies = [
 [[package]]
 name = "calve-testkit"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7#5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7"
 dependencies = [
  "aws-lc-rs",
  "calve-integration-contract",
@@ -506,7 +506,7 @@ dependencies = [
 [[package]]
 name = "calve-win-sec"
 version = "0.1.0"
-source = "git+https://github.com/calvehq/calve-cli.git?rev=0fb1601592571557563669096afe2fce69ba91fc#0fb1601592571557563669096afe2fce69ba91fc"
+source = "git+https://github.com/calvehq/calve-cli.git?rev=5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7#5cc9bbb4a1b33444ec4b95d95953d98d8667c3b7"
 dependencies = [
  "windows-sys 0.59.0",
 ]
