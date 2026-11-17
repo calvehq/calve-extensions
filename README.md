@@ -22,11 +22,12 @@ Each package has three parts (see [docs/authoring.md](docs/authoring.md)):
 ## Using the extensions
 
 The first-party catalog is served at `https://calvehq.github.io/calve-extensions/`. Download its
-first root, check its digest against the one published here, then add it:
+first root, check its digest against the one published here (and in calve-cli's install guide),
+then add it. Root SHA-256: `35eb235e04e8c5417a762193ed137cb83d0ffcd96a2773378298b220e4f96fe7`.
 
 ```sh
 curl -fsSLO https://calvehq.github.io/calve-extensions/metadata/1.root.json
-clv extension catalog add calve https://calvehq.github.io/calve-extensions/ --root 1.root.json --root-digest <sha256>
+clv extension catalog add calve https://calvehq.github.io/calve-extensions/ --root 1.root.json --root-digest 35eb235e04e8c5417a762193ed137cb83d0ffcd96a2773378298b220e4f96fe7
 clv extension install org.calve.software --acknowledge-native
 clv extension enable org.calve.software --acknowledge-native
 ```
