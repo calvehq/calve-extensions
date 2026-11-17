@@ -647,6 +647,15 @@ fn dist(out: &Path, target: &str) -> Result {
         let refs = root().join("extensions").join(e).join("calve-refs.json");
         let refs = refs.is_file().then(|| (refs, dir.join("calve-refs.json")));
         for (from, to) in files.into_iter().chain(refs) {
+            // Natives embed these documents and declare their hashes; a CRLF checkout would
+            // make one platform's binary disagree with the bytes every platform ships.
+            if from.extension().is_some_and(|x| x == "json") && fs::read(&from)?.contains(&b'\r') {
+                return Err(format!(
+                    "{} has CR line endings; check out with LF (.gitattributes)",
+                    from.display()
+                )
+                .into());
+            }
             fs::copy(&from, &to)?;
             let rel = to.strip_prefix(out)?.to_string_lossy().replace('\\', "/");
             sums.push_str(&format!("{}  {rel}\n", sha(&fs::read(&to)?)));
