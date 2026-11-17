@@ -1,0 +1,37 @@
+{
+  "kinds": {
+    "org.calve.software.delete": [
+      {
+        "edge": "ContentHash",
+        "pointer": "/previous_digest"
+      }
+    ],
+    "org.calve.software.rename": [
+      {
+        "edge": "ContentHash",
+        "pointer": "/digest"
+      }
+    ],
+    "org.calve.software.snapshot": [
+      {
+        "edge": "ContentHash",
+        "pointer": "/digest"
+      }
+    ],
+    "org.calve.software.snapshot-chunked": [
+      {
+        "edge": "ContentHash",
+        "pointer": "/digest"
+      },
+      {
+        "edge": "ObjectRef",
+        "pointer": "/chunks/*/blob_digest"
+      },
+      {
+        "edge": "ContentHash",
+        "pointer": "/chunks/*/digest"
+      }
+    ]
+  },
+  "schema": "calve.refs/1"
+}

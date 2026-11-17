@@ -1,0 +1,516 @@
+{
+  "signatures": [
+    {
+      "keyid": "0703732927e95b711f37833440249d96590051372946d2bb70d2bb2f5dd83b18",
+      "sig": "68279d4f30f6abef0c81165dc585f95d0aec290e4c0e0a0cf478ea089826735d1e238d5d733a8017a9e4b6ea628c2b09ed5a8eeca273f6557edd957dce26a40f"
+    },
+    {
+      "keyid": "ea0fb0cf785b8f8e1bc354e588f11cf96e19ffc6bbbfd0d3d96df3be4cc2e651",
+      "sig": "63e0d9baf2599d5a169045e4ff88088bcac85d397e5ddc4aeae99c264193c8d7542fd352d34e3eaaad3128faf318d9b1d9442c7a96a13a38acff3a4cc9432e0e"
+    },
+    {
+      "keyid": "f8acb3fc93813d670b4c877405be81a33f77174944f2b49a247a1079be575cc3",
+      "sig": "f86d6d4aa387141feacac530eb377df2fc53bd92e391b658672e86e6a36a22fad76347371cebc9d19e9596cd6da79d19e2293602e0866fcdaf1059b8cc23be03"
+    }
+  ],
+  "signed": {
+    "_type": "targets",
+    "expires": "2027-02-15T11:29:48Z",
+    "spec_version": "1.0.31",
+    "targets": {
+      "org.calve.c-cpp/0.1.0/aarch64-apple-darwin/calve_ext_c_cpp": {
+        "hashes": {
+          "sha256": "8962695cd2ce4a936038de2470265e01509ffc8c7cab7651643da9256a0b753a"
+        },
+        "length": 634208
+      },
+      "org.calve.c-cpp/0.1.0/aarch64-unknown-linux-gnu/calve_ext_c_cpp": {
+        "hashes": {
+          "sha256": "0a7f652b7f6ad495a870f5e9c2d9dd9014ab7e30b970fe20ae276f86a22af915"
+        },
+        "length": 660144
+      },
+      "org.calve.c-cpp/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "89e1f30cd7c90a7845a8c82fee031355514a7ce5141fc839f1da5afbb8314bde"
+        },
+        "length": 456
+      },
+      "org.calve.c-cpp/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "0db803fa7e8fdef942c673a79f67bc98c8aa65b1e0fca1c040b672dd82b46cb2"
+        },
+        "length": 255678
+      },
+      "org.calve.c-cpp/0.1.0/x86_64-apple-darwin/calve_ext_c_cpp": {
+        "hashes": {
+          "sha256": "9a58679f935748254a3902e2b043d3882b43bb57289df9c826b0ba3f38ccacb4"
+        },
+        "length": 662816
+      },
+      "org.calve.c-cpp/0.1.0/x86_64-pc-windows-msvc/calve_ext_c_cpp.exe": {
+        "hashes": {
+          "sha256": "b6004a06f082c923bd6d6032e7235de3ee5898709fab35f432eaa3d09b878efd"
+        },
+        "length": 584704
+      },
+      "org.calve.c-cpp/0.1.0/x86_64-unknown-linux-gnu/calve_ext_c_cpp": {
+        "hashes": {
+          "sha256": "3efbc0fd86cecbf8e82b07d87086ed95260e7fcd39b7aa6106879805aa63d21a"
+        },
+        "length": 696400
+      },
+      "org.calve.c-cpp/package.json": {
+        "hashes": {
+          "sha256": "9f6907520b82afc03b52171366b14ae7d07d70d156543b6dc6735514b95bd2ed"
+        },
+        "length": 813
+      },
+      "org.calve.general/0.1.0/aarch64-apple-darwin/calve_ext_general": {
+        "hashes": {
+          "sha256": "beae268458ded9d8836eb86f85a43395b1992eede845edfd3ae53a1cf24a3efb"
+        },
+        "length": 617680
+      },
+      "org.calve.general/0.1.0/aarch64-unknown-linux-gnu/calve_ext_general": {
+        "hashes": {
+          "sha256": "5483b78f94b7b0d72fe5e2a59b588d98a027c05c240fd6591778bd35dc70dcee"
+        },
+        "length": 660144
+      },
+      "org.calve.general/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "4830f80eb927d162f6314d57a6f3e2ff3bbeddd7b1d920f5ec5c646c7054635a"
+        },
+        "length": 1055
+      },
+      "org.calve.general/0.1.0/calve-refs.json": {
+        "hashes": {
+          "sha256": "1e373b5bee7e1fa88a9db622bd2c913efc22493f3a16f5fe1fc83f70dfe31c29"
+        },
+        "length": 477
+      },
+      "org.calve.general/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "db5b4da6ccc66f97ba424e21d33af0feab4be561a69778b5e6aa3fe0287efc27"
+        },
+        "length": 249199
+      },
+      "org.calve.general/0.1.0/x86_64-apple-darwin/calve_ext_general": {
+        "hashes": {
+          "sha256": "9579dc6a521fbf1a164c39dc621eb17b9ea91efb5e20911121b1fd4fb832b5f7"
+        },
+        "length": 646376
+      },
+      "org.calve.general/0.1.0/x86_64-pc-windows-msvc/calve_ext_general.exe": {
+        "hashes": {
+          "sha256": "d7fc9ca3912e5ac0585b6eb896f82d8c089f82d22bfbe3aa78190d30af545d7e"
+        },
+        "length": 571392
+      },
+      "org.calve.general/0.1.0/x86_64-unknown-linux-gnu/calve_ext_general": {
+        "hashes": {
+          "sha256": "7d6a67837cddfd563fbeda370480c5a50d8568b3a917eab4248d2740f57bc7dc"
+        },
+        "length": 677936
+      },
+      "org.calve.general/package.json": {
+        "hashes": {
+          "sha256": "a8789d7201cbb411abed9692b3fd1ec984e0f77ab6bc95bd9c8cf3c7bf6996c4"
+        },
+        "length": 850
+      },
+      "org.calve.go/0.1.0/aarch64-apple-darwin/calve_ext_go": {
+        "hashes": {
+          "sha256": "b90c573201576dabf12e2e5c94bf2f7e5f191f6e8e6c8efae2c662f856c09f90"
+        },
+        "length": 634192
+      },
+      "org.calve.go/0.1.0/aarch64-unknown-linux-gnu/calve_ext_go": {
+        "hashes": {
+          "sha256": "1538ef13135c2fa19668b493d64de375844621e14d35496659572a2cec381f1d"
+        },
+        "length": 660144
+      },
+      "org.calve.go/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "6f0c34b18d32cfa15dd9e047f838f2a984cd81f339d83a14ad5ff759aeb0d6a1"
+        },
+        "length": 424
+      },
+      "org.calve.go/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "a088e695f2876221b66d737ceb3501155b3d68e42e27ee7f8f3fc4cbf0222c0e"
+        },
+        "length": 255583
+      },
+      "org.calve.go/0.1.0/x86_64-apple-darwin/calve_ext_go": {
+        "hashes": {
+          "sha256": "9e659d750a6fa2c659b0e921d7bc192849029c7dc1dbf88ff8d3c20b105f18fb"
+        },
+        "length": 662816
+      },
+      "org.calve.go/0.1.0/x86_64-pc-windows-msvc/calve_ext_go.exe": {
+        "hashes": {
+          "sha256": "c24d24343f6fd166e858a4cbc0bdb7dfbba5cedda9b84a8ccecc5a8ca3c525aa"
+        },
+        "length": 584704
+      },
+      "org.calve.go/0.1.0/x86_64-unknown-linux-gnu/calve_ext_go": {
+        "hashes": {
+          "sha256": "e8ace1f1d8d0a3c24f4d6381c6a0209f72ea1ea54a29f6ee1ec35b8712c7ebf1"
+        },
+        "length": 696368
+      },
+      "org.calve.go/package.json": {
+        "hashes": {
+          "sha256": "3c556b102d4c08de91c3980ea459e1410484837918b42be9232f33d10a274245"
+        },
+        "length": 795
+      },
+      "org.calve.hcl/0.1.0/aarch64-apple-darwin/calve_ext_hcl": {
+        "hashes": {
+          "sha256": "4757e7332c1781a311a67b70c406cddbab383beb6bc4c4c63543ec42253d6eb3"
+        },
+        "length": 634192
+      },
+      "org.calve.hcl/0.1.0/aarch64-unknown-linux-gnu/calve_ext_hcl": {
+        "hashes": {
+          "sha256": "6ceaaf3e7ceeef4a523311445800af246a9293fa3c6092a6daebe9709dc4065d"
+        },
+        "length": 660144
+      },
+      "org.calve.hcl/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "78218bfce7ef1c14305366546483a8b263854cdfcd64bdd5f805ff5db9b87023"
+        },
+        "length": 409
+      },
+      "org.calve.hcl/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "895a4bc4429ea3b777b6cb9138c9858269f324979a3c152f2d9f96a256bb9198"
+        },
+        "length": 255636
+      },
+      "org.calve.hcl/0.1.0/x86_64-apple-darwin/calve_ext_hcl": {
+        "hashes": {
+          "sha256": "123179f031b646af805101cd5c2522002b65ebdf0640eecffebd8177fe81a6fd"
+        },
+        "length": 662816
+      },
+      "org.calve.hcl/0.1.0/x86_64-pc-windows-msvc/calve_ext_hcl.exe": {
+        "hashes": {
+          "sha256": "f9d715f44504902be5e75705c1971215f1b5d967a4790e809c6cf0d0e2f8bb7f"
+        },
+        "length": 584704
+      },
+      "org.calve.hcl/0.1.0/x86_64-unknown-linux-gnu/calve_ext_hcl": {
+        "hashes": {
+          "sha256": "4cd183325aeb826802d61ce83e69fa9a8e533dc043e83dedd8fefd3a46c93f4b"
+        },
+        "length": 696384
+      },
+      "org.calve.hcl/package.json": {
+        "hashes": {
+          "sha256": "0eab9efba072a41e375bf8286d1f259f198a825bc4e546902473f1a9b3aef724"
+        },
+        "length": 801
+      },
+      "org.calve.java/0.1.0/aarch64-apple-darwin/calve_ext_java": {
+        "hashes": {
+          "sha256": "78307aef966af0ca42ddbf650637e592bdc4b35e7b29146b636189e121e55d76"
+        },
+        "length": 634192
+      },
+      "org.calve.java/0.1.0/aarch64-unknown-linux-gnu/calve_ext_java": {
+        "hashes": {
+          "sha256": "b62f86bd5edc8065c6ba0b73215ccede7e30ed87448e88bac4b0234786dc8821"
+        },
+        "length": 660144
+      },
+      "org.calve.java/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "ec7bf13f129c0bd2dda64123cba060c0e9781c637b25ecf69466597a89be173e"
+        },
+        "length": 455
+      },
+      "org.calve.java/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "60f4b13a3381b9e06be6a33855b11662bc4b5a364e29da5de659c9efda589f14"
+        },
+        "length": 255621
+      },
+      "org.calve.java/0.1.0/x86_64-apple-darwin/calve_ext_java": {
+        "hashes": {
+          "sha256": "0d5aaf7399ccc3f8af8b7e658642002491d60788af6a1c330ca1787e214f254c"
+        },
+        "length": 662816
+      },
+      "org.calve.java/0.1.0/x86_64-pc-windows-msvc/calve_ext_java.exe": {
+        "hashes": {
+          "sha256": "4048ab12b778f708e5f48f54672d12964788598c821752f62c0cbbf32e7a9ddc"
+        },
+        "length": 584704
+      },
+      "org.calve.java/0.1.0/x86_64-unknown-linux-gnu/calve_ext_java": {
+        "hashes": {
+          "sha256": "764cfe29891a274f6ca1f050cfc82cd6f6dd103740184dd812b5fe016faca8a2"
+        },
+        "length": 696368
+      },
+      "org.calve.java/package.json": {
+        "hashes": {
+          "sha256": "0df6fcea9466527a0bedadfbdcf42bab7b73f49fea4fa928ab498e80ee9cb1dd"
+        },
+        "length": 807
+      },
+      "org.calve.javascript-typescript/0.1.0/aarch64-apple-darwin/calve_ext_javascript_typescript": {
+        "hashes": {
+          "sha256": "9db770aca34baffd55ecd7b8f40d894eba1cbe651ec31344e69f6ca55e370b53"
+        },
+        "length": 634224
+      },
+      "org.calve.javascript-typescript/0.1.0/aarch64-unknown-linux-gnu/calve_ext_javascript_typescript": {
+        "hashes": {
+          "sha256": "10eb546ee50198d31f441563571c9adaf601614ebcc6171bdcd2bd9ca0e64abe"
+        },
+        "length": 660144
+      },
+      "org.calve.javascript-typescript/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "f62a45203822ab0ba2f72010d154a0b09dfb9e5f64ca64678389462b3d12b262"
+        },
+        "length": 477
+      },
+      "org.calve.javascript-typescript/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "85f2d0f572a1bcdd27405d1f9ed02bc5e97d64f7d13be539a1fd0c440a4e36ed"
+        },
+        "length": 255801
+      },
+      "org.calve.javascript-typescript/0.1.0/x86_64-apple-darwin/calve_ext_javascript_typescript": {
+        "hashes": {
+          "sha256": "9cdbf88b56663f84955b09451ab679b50980230cebed7bf9c5a52048cf9e5706"
+        },
+        "length": 662816
+      },
+      "org.calve.javascript-typescript/0.1.0/x86_64-pc-windows-msvc/calve_ext_javascript_typescript.exe": {
+        "hashes": {
+          "sha256": "4b7bdeeee5c721887da368227adef60835568f055abf0f251cd484a5da01382b"
+        },
+        "length": 584704
+      },
+      "org.calve.javascript-typescript/0.1.0/x86_64-unknown-linux-gnu/calve_ext_javascript_typescript": {
+        "hashes": {
+          "sha256": "23aea743b5e3c4293fb7fd2f0f726d59e57c740501bd6a020da124efc5f066e2"
+        },
+        "length": 696416
+      },
+      "org.calve.javascript-typescript/package.json": {
+        "hashes": {
+          "sha256": "076f3bface67ad4765aec41ab32eb8e14b02bd0a744c3a4b05c71ae4f5c59cfb"
+        },
+        "length": 909
+      },
+      "org.calve.python/0.1.0/aarch64-apple-darwin/calve_ext_python": {
+        "hashes": {
+          "sha256": "f44e16bab0e6b41630a8bb1b4b37f6b6f189bcb739cf7552a5d785d078060ff6"
+        },
+        "length": 634208
+      },
+      "org.calve.python/0.1.0/aarch64-unknown-linux-gnu/calve_ext_python": {
+        "hashes": {
+          "sha256": "45422a533f6419f1666689e514b5fc62ce4ba39ee144231c5122ce7595e25d59"
+        },
+        "length": 660144
+      },
+      "org.calve.python/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "a6df6925e316b12a7ce6ffa66b4ced684f97d66405301592646d53195bf07c56"
+        },
+        "length": 464
+      },
+      "org.calve.python/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "24b7c5009229bf1cc2c4429fcbace507ad9aacd167aea0c456bd796eab6c77b3"
+        },
+        "length": 255688
+      },
+      "org.calve.python/0.1.0/x86_64-apple-darwin/calve_ext_python": {
+        "hashes": {
+          "sha256": "5ac28eb2865296cef15bc08d3a12f4444bee898477759cac97a91b0855bf127d"
+        },
+        "length": 662816
+      },
+      "org.calve.python/0.1.0/x86_64-pc-windows-msvc/calve_ext_python.exe": {
+        "hashes": {
+          "sha256": "3e641458b87dae3b19afed761b72e560f35acfee51977451586292760e667b08"
+        },
+        "length": 584704
+      },
+      "org.calve.python/0.1.0/x86_64-unknown-linux-gnu/calve_ext_python": {
+        "hashes": {
+          "sha256": "f350e2bbf11f1a3c512cd8a467f9e21e92b5b010dadd482828fea9d47514624a"
+        },
+        "length": 696384
+      },
+      "org.calve.python/package.json": {
+        "hashes": {
+          "sha256": "3726c1475bdde1285c0a9462d0fc91436cef35202174fa9415b25662103b1e6a"
+        },
+        "length": 819
+      },
+      "org.calve.rust/0.1.0/aarch64-apple-darwin/calve_ext_rust": {
+        "hashes": {
+          "sha256": "769d1b8aa27c746caeb658141a01b32c09120df18899883cebff0fbc5fa24ec5"
+        },
+        "length": 634192
+      },
+      "org.calve.rust/0.1.0/aarch64-unknown-linux-gnu/calve_ext_rust": {
+        "hashes": {
+          "sha256": "40a6cb1ceb68404935efd87f38084d2321b749d4e5798ee732f829566648e733"
+        },
+        "length": 660144
+      },
+      "org.calve.rust/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "64c667f104f36cd7c456f52720125d1df133ccc56020a80b3dc31c3c1eaca15a"
+        },
+        "length": 424
+      },
+      "org.calve.rust/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "0ac5989abd817c752e2d5cd084bde06b44baffee58d4f9a7e89a02f4842eab78"
+        },
+        "length": 255589
+      },
+      "org.calve.rust/0.1.0/x86_64-apple-darwin/calve_ext_rust": {
+        "hashes": {
+          "sha256": "7f7ffda1a2d1114547feafb05b78871cdcb54b6dc92fb81f53bd7e420ab58779"
+        },
+        "length": 662816
+      },
+      "org.calve.rust/0.1.0/x86_64-pc-windows-msvc/calve_ext_rust.exe": {
+        "hashes": {
+          "sha256": "30ea4d77052051d13d43e4df375b14cb0092ea698cdc245d81fb08ce08db6fbc"
+        },
+        "length": 584704
+      },
+      "org.calve.rust/0.1.0/x86_64-unknown-linux-gnu/calve_ext_rust": {
+        "hashes": {
+          "sha256": "9d9fe7952e3d2655daad95f514e7dc50b266423223054056962a3184c3630cfc"
+        },
+        "length": 696368
+      },
+      "org.calve.rust/package.json": {
+        "hashes": {
+          "sha256": "f027a23d85f1ce6d7c7b616a8ca4206603e28cf2bc6ddce51602163f0a85b922"
+        },
+        "length": 807
+      },
+      "org.calve.shell/0.1.0/aarch64-apple-darwin/calve_ext_shell": {
+        "hashes": {
+          "sha256": "0d83b67523f3dd6e71a854ac4afbc40e7c96099371d56910a675ab3c3be3e2c4"
+        },
+        "length": 634208
+      },
+      "org.calve.shell/0.1.0/aarch64-unknown-linux-gnu/calve_ext_shell": {
+        "hashes": {
+          "sha256": "5573cb62c6a8b843bc1a18a163df8637e908ebcb6615f8e12a09f9255b66fcc6"
+        },
+        "length": 660144
+      },
+      "org.calve.shell/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "ae352cd1aeb66eb79c16707939c480357de6ab8803342daffd897da513484d10"
+        },
+        "length": 415
+      },
+      "org.calve.shell/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "65c966dfa68b947c37e2b518940d8df9003e94c03819a70a32eeefef3fd4fe7c"
+        },
+        "length": 255638
+      },
+      "org.calve.shell/0.1.0/x86_64-apple-darwin/calve_ext_shell": {
+        "hashes": {
+          "sha256": "e81da7a7e1a3344929add42d83ec09f48ba9e5e4a978f303d9c37a5305d85c0f"
+        },
+        "length": 662816
+      },
+      "org.calve.shell/0.1.0/x86_64-pc-windows-msvc/calve_ext_shell.exe": {
+        "hashes": {
+          "sha256": "080658263d6b1366a3e1a4c2490a37d83bf567b1cecdceb62ca9dded269dba87"
+        },
+        "length": 584704
+      },
+      "org.calve.shell/0.1.0/x86_64-unknown-linux-gnu/calve_ext_shell": {
+        "hashes": {
+          "sha256": "37686e67d29274e9e3194f5774cbc1fc1930140f1ca533957a7c31a77ac45c23"
+        },
+        "length": 696400
+      },
+      "org.calve.shell/package.json": {
+        "hashes": {
+          "sha256": "2adb3b5a7f66db14d72910fc3d42fb9f77d2b2aae8c10227085f9843e35e933e"
+        },
+        "length": 813
+      },
+      "org.calve.software/0.1.0/aarch64-apple-darwin/calve_ext_software": {
+        "hashes": {
+          "sha256": "005b87c640efe1998357821e58bff0de78e2a496eaf16d4f24738dbbff636e90"
+        },
+        "length": 650720
+      },
+      "org.calve.software/0.1.0/aarch64-unknown-linux-gnu/calve_ext_software": {
+        "hashes": {
+          "sha256": "9dc5c05836cda81dd957c5169b54297cbdf3173a85322b059a09c82b279efd5e"
+        },
+        "length": 660144
+      },
+      "org.calve.software/0.1.0/calve-integration.json": {
+        "hashes": {
+          "sha256": "dbe111ba0a04c7a47a3b2e62924a390780a28441182ede8ab2d91bf3af84262b"
+        },
+        "length": 999
+      },
+      "org.calve.software/0.1.0/calve-refs.json": {
+        "hashes": {
+          "sha256": "85bae509503869f2a34ea315410c18d876d4be71ea9d3b5166df6d58ee0ba7a3"
+        },
+        "length": 716
+      },
+      "org.calve.software/0.1.0/cic.wasm": {
+        "hashes": {
+          "sha256": "821e310816cb2b9d767b689b2bf131f79fb9095f2bd924bf669d0a4e29bce652"
+        },
+        "length": 310282
+      },
+      "org.calve.software/0.1.0/x86_64-apple-darwin/calve_ext_software": {
+        "hashes": {
+          "sha256": "582eb8476fc749727f9b2c639c83da11b6d6edfc313d63e680b8e8cde9cae3a4"
+        },
+        "length": 683288
+      },
+      "org.calve.software/0.1.0/x86_64-pc-windows-msvc/calve_ext_software.exe": {
+        "hashes": {
+          "sha256": "cbdd2619868754aeccc185d58de05528c1fbe0b58c68091f913bc1d14edf9d65"
+        },
+        "length": 617472
+      },
+      "org.calve.software/0.1.0/x86_64-unknown-linux-gnu/calve_ext_software": {
+        "hashes": {
+          "sha256": "431c93b382d850c006793a3e6505d4580db00c4e4c380bb3ab807c4630592763"
+        },
+        "length": 712832
+      },
+      "org.calve.software/package.json": {
+        "hashes": {
+          "sha256": "9a1d2c9d5926f5b22ba32414c153e66694a257db83144c50461ccdcc7effa89d"
+        },
+        "length": 856
+      }
+    },
+    "version": 1
+  }
+}

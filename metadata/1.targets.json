@@ -1,0 +1,97 @@
+{
+  "signatures": [
+    {
+      "keyid": "6c8ef132badec371869b958d538b53c1ab02f05a770c90fb96ad8ef5b5e679c8",
+      "sig": "e57d99ddcb0f859221dd4d6308b777dc6c85e1fabb26a45d220a1b2410f9f336c0a7cd63064a5c171c5c5841318bd92b0933c90121ecb8826764bedea0ac1c00"
+    }
+  ],
+  "signed": {
+    "_type": "targets",
+    "delegations": {
+      "keys": {
+        "0703732927e95b711f37833440249d96590051372946d2bb70d2bb2f5dd83b18": {
+          "keytype": "ed25519",
+          "keyval": {
+            "public": "f0ba60585daa47473994fe9142e4dd8bad2e28fc926dbd3a27a174c905480a0f"
+          },
+          "scheme": "ed25519"
+        },
+        "ea0fb0cf785b8f8e1bc354e588f11cf96e19ffc6bbbfd0d3d96df3be4cc2e651": {
+          "keytype": "ed25519",
+          "keyval": {
+            "public": "3c4c32a2c80db5b982af5c656cb2a39b0f549861f0fc06279ee040762e47c2df"
+          },
+          "scheme": "ed25519"
+        },
+        "f8acb3fc93813d670b4c877405be81a33f77174944f2b49a247a1079be575cc3": {
+          "keytype": "ed25519",
+          "keyval": {
+            "public": "83b387138aad7bdbebe4b51b5f933b2941cf639e5de45ac69b8b760119c9a0b4"
+          },
+          "scheme": "ed25519"
+        }
+      },
+      "roles": [
+        {
+          "keyids": [
+            "0703732927e95b711f37833440249d96590051372946d2bb70d2bb2f5dd83b18",
+            "ea0fb0cf785b8f8e1bc354e588f11cf96e19ffc6bbbfd0d3d96df3be4cc2e651",
+            "f8acb3fc93813d670b4c877405be81a33f77174944f2b49a247a1079be575cc3"
+          ],
+          "name": "calve",
+          "paths": [
+            "org.calve.c-cpp/*",
+            "org.calve.c-cpp/*/*",
+            "org.calve.c-cpp/*/*/*",
+            "org.calve.general/*",
+            "org.calve.general/*/*",
+            "org.calve.general/*/*/*",
+            "org.calve.go/*",
+            "org.calve.go/*/*",
+            "org.calve.go/*/*/*",
+            "org.calve.hcl/*",
+            "org.calve.hcl/*/*",
+            "org.calve.hcl/*/*/*",
+            "org.calve.java/*",
+            "org.calve.java/*/*",
+            "org.calve.java/*/*/*",
+            "org.calve.javascript-typescript/*",
+            "org.calve.javascript-typescript/*/*",
+            "org.calve.javascript-typescript/*/*/*",
+            "org.calve.python/*",
+            "org.calve.python/*/*",
+            "org.calve.python/*/*/*",
+            "org.calve.rust/*",
+            "org.calve.rust/*/*",
+            "org.calve.rust/*/*/*",
+            "org.calve.shell/*",
+            "org.calve.shell/*/*",
+            "org.calve.shell/*/*/*",
+            "org.calve.software/*",
+            "org.calve.software/*/*",
+            "org.calve.software/*/*/*"
+          ],
+          "terminating": true,
+          "threshold": 2
+        }
+      ]
+    },
+    "expires": "2027-02-15T11:29:48Z",
+    "spec_version": "1.0.31",
+    "targets": {
+      "id-policy.json": {
+        "hashes": {
+          "sha256": "830bcc9ec7a3cfa48a8d4d10225bc0e5de5237ed240c814c89fe1ee5f233a1eb"
+        },
+        "length": 34
+      },
+      "index.json": {
+        "hashes": {
+          "sha256": "50e890d641565cc94636bdab45e1333508c712aa5785cde518b79fafd983bd1a"
+        },
+        "length": 229
+      }
+    },
+    "version": 1
+  }
+}
