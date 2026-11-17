@@ -33,6 +33,45 @@ cargo xtask publish --keys KEYS --dist DIST --repo REPO [--publisher-keys PUB] [
 - Calve records the delegated role as the package's publisher (`"publisher": "calve"`) and pins
   it for later installs.
 
+## Hosting and refresh
+
+The catalog is served by GitHub Pages from this repository's `gh-pages` branch, at
+`https://calvehq.github.io/calve-extensions/` (a static TUF repository; `.nojekyll` keeps every
+file served as is).
+
+1. Run the `catalog-build` workflow (manual). It builds `dist` for every release target
+   (`x86_64`/`aarch64` Linux, `aarch64`/`x86_64` macOS, `x86_64` Windows MSVC) and uploads one
+   artifact per target. It uses no key.
+2. On the publisher's machine, merge the artifacts into one `DIST` (the `x86_64-unknown-linux-gnu`
+   build whole, plus `native/<target>/` from each other one), check out `gh-pages` into `REPO`,
+   run `publish`, and push.
+
+Metadata expires: `timestamp.json` after 7 days, `snapshot.json` after 30, `targets.json` and
+`calve.json` after 90, `root.json` after 365. Expired metadata is refused by every client.
+
+- **Snapshot and timestamp are online.** Their keys are the secrets `CATALOG_SNAPSHOT_KEY` and
+  `CATALOG_TIMESTAMP_KEY` of the `catalog-online` environment (deployments from `master` only),
+  and the `catalog-refresh` workflow re-signs both files on gh-pages every Monday and Thursday:
+
+  ```
+  cargo xtask refresh --keys DIR --repo REPO   # DIR holds only snapshot.key and timestamp.key
+  ```
+
+  `refresh` refuses keys that `root.json` does not name, and never touches targets, the
+  publisher's role or root. It re-signs only the state those keys last signed: the current
+  `timestamp.json` and `snapshot.json` must carry valid signatures by them, the timestamp must
+  name exactly that snapshot, and the snapshot must name the current `targets.json` and
+  `calve.json` versions. Residual risk: whoever can write `gh-pages` can swap in a complete
+  older set of genuinely signed files; a refresh re-signs it with versions below what existing
+  clients have seen, so they reject it as a rollback, but a new client could be served that
+  older (still first-party-signed) package set. Limit who can push to `gh-pages`.
+- **Targets, the publisher's role and root are offline.** Re-sign them before they expire by
+  publishing again (an empty `--dist` directory re-signs everything): at least every 90 days for
+  targets and `calve.json`, and every 365 days for root (a new root version).
+- GitHub disables scheduled workflows in a public repository after 60 days without activity.
+  Check that `catalog-refresh` is still enabled and green whenever you re-sign, and re-enable it
+  if needed.
+
 ## Rotate keys
 
 ```

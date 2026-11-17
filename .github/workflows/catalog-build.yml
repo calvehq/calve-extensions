@@ -1,0 +1,45 @@
+name: catalog-build
+
+# Release packages for every target the first-party catalog serves, as artifacts. Manual only.
+# No key is used here: signing and publishing happen offline (docs/publishing.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dist:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { os: macos-latest, target: aarch64-apple-darwin }
+          # Apple Silicon builds the Intel target too (calve-cli's release workflow does the same).
+          - { os: macos-latest, target: x86_64-apple-darwin }
+          - { os: windows-2022, target: x86_64-pc-windows-msvc }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install --no-self-update
+          rustup target add ${{ matrix.target }}
+      # aws-lc-sys assembles its x86-64 code with NASM, which the Windows image lacks.
+      - name: NASM
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@72793074d3c8cdda771dba85f6deafe00623038b # v1.5.2
+        with:
+          version: 2.16.03
+      - name: Packages
+        shell: bash
+        run: cargo xtask dist --out dist --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: catalog-dist-${{ matrix.target }}
+          path: dist
