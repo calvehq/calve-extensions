@@ -118,6 +118,13 @@ fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
+fn unhex(s: &str) -> Option<Vec<u8>> {
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(s.get(i..i + 2)?, 16).ok())
+        .collect()
+}
+
 fn run(c: &mut Command) -> Result {
     let status = c.status()?;
     if !status.success() {
@@ -1006,7 +1013,34 @@ fn refresh(keys: &Path, repo: &Path) -> Result {
             return Err(format!("{role}.key is not the {role} key root.json names").into());
         }
     }
-    let old = read_signed(repo, "snapshot.json")?.ok_or("no snapshot.json: publish first")?;
+    // Re-sign only what this snapshot key signed before, and only if it still describes the
+    // repository: write access to the files alone must not get an edited `meta` signed.
+    let envelope_json: Value =
+        serde_json::from_slice(&fs::read(repo.join("metadata/snapshot.json"))?)?;
+    let old = envelope_json["signed"].clone();
+    let canonical = jcs::to_vec(&old).map_err(|_| "snapshot.json: not canonicalizable")?;
+    let signed_by_us = envelope_json["signatures"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|s| s["keyid"] == key_id(&snapshot_key))
+        .filter_map(|s| s["sig"].as_str().and_then(unhex))
+        .filter_map(|b| ed25519_dalek::Signature::from_slice(&b).ok())
+        .any(|sig| {
+            snapshot_key
+                .verifying_key()
+                .verify_strict(&canonical, &sig)
+                .is_ok()
+        });
+    if !signed_by_us {
+        return Err("snapshot.json carries no valid signature by this snapshot key".into());
+    }
+    for f in ["targets.json", &format!("{PUBLISHER_ROLE}.json")] {
+        let current = read_signed(repo, f)?.ok_or(format!("no {f}"))?["version"].clone();
+        if old["meta"][f]["version"] != current {
+            return Err(format!("snapshot.json does not name {f} version {current}").into());
+        }
+    }
     let stamped = read_signed(repo, "timestamp.json")?.ok_or("no timestamp.json")?;
     let version = old["version"]
         .as_u64()
@@ -1133,6 +1167,27 @@ mod tests {
             read_signed(&repo, "timestamp.json").unwrap().unwrap()["version"],
             2
         );
+
+        // Someone with write access to the files but not the key: an edited `meta` (signature
+        // now invalid), one signed by another key, and a correctly signed snapshot that no
+        // longer names the current targets version are all refused.
+        let path = repo.join("metadata/snapshot.json");
+        let good = fs::read(&path).unwrap();
+        let mut env: Value = serde_json::from_slice(&good).unwrap();
+        env["signed"]["meta"]["targets.json"]["version"] = json!(0);
+        fs::write(&path, serde_json::to_vec(&env).unwrap()).unwrap();
+        assert!(refresh(&keys, &repo).is_err(), "edited meta");
+        let forged = envelope(&env["signed"], &load_key(&other, "snapshot").unwrap()).unwrap();
+        fs::write(&path, forged).unwrap();
+        assert!(refresh(&keys, &repo).is_err(), "signed by another key");
+        let stale = envelope(&env["signed"], &load_key(&keys, "snapshot").unwrap()).unwrap();
+        fs::write(&path, stale).unwrap();
+        assert!(
+            refresh(&keys, &repo).is_err(),
+            "meta does not match targets.json"
+        );
+        fs::write(&path, good).unwrap();
+        refresh(&keys, &repo).unwrap();
         fs::remove_dir_all(&t).unwrap();
     }
 
