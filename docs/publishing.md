@@ -58,7 +58,13 @@ Metadata expires: `timestamp.json` after 7 days, `snapshot.json` after 30, `targ
   ```
 
   `refresh` refuses keys that `root.json` does not name, and never touches targets, the
-  publisher's role or root.
+  publisher's role or root. It re-signs only the state those keys last signed: the current
+  `timestamp.json` and `snapshot.json` must carry valid signatures by them, the timestamp must
+  name exactly that snapshot, and the snapshot must name the current `targets.json` and
+  `calve.json` versions. Residual risk: whoever can write `gh-pages` can swap in a complete
+  older set of genuinely signed files; a refresh re-signs it with versions below what existing
+  clients have seen, so they reject it as a rollback, but a new client could be served that
+  older (still first-party-signed) package set. Limit who can push to `gh-pages`.
 - **Targets, the publisher's role and root are offline.** Re-sign them before they expire by
   publishing again (an empty `--dist` directory re-signs everything): at least every 90 days for
   targets and `calve.json`, and every 365 days for root (a new root version).

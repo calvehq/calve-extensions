@@ -996,6 +996,25 @@ fn stage(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path) -> Result<Vec<(St
     Ok(files)
 }
 
+/// The `signed` part of `envelope`, if it carries a valid signature by `key` (over its canonical
+/// form, as clients check it).
+fn verified(envelope: &[u8], key: &SigningKey, file: &str) -> Result<Value> {
+    let v: Value = serde_json::from_slice(envelope)?;
+    let canonical = jcs::to_vec(&v["signed"]).map_err(|_| format!("{file}: not canonical"))?;
+    let ok = v["signatures"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|s| s["keyid"] == key_id(key))
+        .filter_map(|s| s["sig"].as_str().and_then(unhex))
+        .filter_map(|b| ed25519_dalek::Signature::from_slice(&b).ok())
+        .any(|sig| key.verifying_key().verify_strict(&canonical, &sig).is_ok());
+    if !ok {
+        return Err(format!("{file} carries no valid signature by its key").into());
+    }
+    Ok(v["signed"].clone())
+}
+
 /// Re-signs `snapshot.json` (same `meta`, next version) and `timestamp.json` with only the
 /// online snapshot and timestamp keys, so a published repository does not expire between
 /// publishes. Targets, the publisher's role and root are untouched (offline keys).
@@ -1013,27 +1032,22 @@ fn refresh(keys: &Path, repo: &Path) -> Result {
             return Err(format!("{role}.key is not the {role} key root.json names").into());
         }
     }
-    // Re-sign only what this snapshot key signed before, and only if it still describes the
-    // repository: write access to the files alone must not get an edited `meta` signed.
-    let envelope_json: Value =
-        serde_json::from_slice(&fs::read(repo.join("metadata/snapshot.json"))?)?;
-    let old = envelope_json["signed"].clone();
-    let canonical = jcs::to_vec(&old).map_err(|_| "snapshot.json: not canonicalizable")?;
-    let signed_by_us = envelope_json["signatures"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|s| s["keyid"] == key_id(&snapshot_key))
-        .filter_map(|s| s["sig"].as_str().and_then(unhex))
-        .filter_map(|b| ed25519_dalek::Signature::from_slice(&b).ok())
-        .any(|sig| {
-            snapshot_key
-                .verifying_key()
-                .verify_strict(&canonical, &sig)
-                .is_ok()
-        });
-    if !signed_by_us {
-        return Err("snapshot.json carries no valid signature by this snapshot key".into());
+    // Re-sign only the state this repository's online keys last signed, and only while it
+    // still describes the repository: write access to the files alone must not get an edited
+    // or swapped `meta` signed. The timestamp (ours) must name exactly this snapshot (ours).
+    let snapshot_bytes = fs::read(repo.join("metadata/snapshot.json"))?;
+    let old = verified(&snapshot_bytes, &snapshot_key, "snapshot.json")?;
+    let stamped = verified(
+        &fs::read(repo.join("metadata/timestamp.json"))?,
+        &timestamp_key,
+        "timestamp.json",
+    )?;
+    let named = &stamped["meta"]["snapshot.json"];
+    if named["version"] != old["version"]
+        || named["length"] != json!(snapshot_bytes.len())
+        || named["hashes"]["sha256"] != json!(sha(&snapshot_bytes))
+    {
+        return Err("timestamp.json does not name the current snapshot.json".into());
     }
     for f in ["targets.json", &format!("{PUBLISHER_ROLE}.json")] {
         let current = read_signed(repo, f)?.ok_or(format!("no {f}"))?["version"].clone();
@@ -1041,7 +1055,6 @@ fn refresh(keys: &Path, repo: &Path) -> Result {
             return Err(format!("snapshot.json does not name {f} version {current}").into());
         }
     }
-    let stamped = read_signed(repo, "timestamp.json")?.ok_or("no timestamp.json")?;
     let version = old["version"]
         .as_u64()
         .ok_or("snapshot.json: version")?
@@ -1186,6 +1199,9 @@ mod tests {
             refresh(&keys, &repo).is_err(),
             "meta does not match targets.json"
         );
+        // Replay of an older, genuinely signed snapshot: the timestamp names another one.
+        fs::copy(repo.join("metadata/1.snapshot.json"), &path).unwrap();
+        assert!(refresh(&keys, &repo).is_err(), "replayed snapshot");
         fs::write(&path, good).unwrap();
         refresh(&keys, &repo).unwrap();
         fs::remove_dir_all(&t).unwrap();
