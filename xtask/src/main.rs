@@ -23,6 +23,8 @@
 //!   and threshold); every id must start with the publisher's id prefix. Everything is staged
 //!   first and committed file by file, `timestamp.json` last, so a crash never exposes a
 //!   partial version; `--resume` finishes an interrupted commit.
+//! - `refresh --keys DIR --repo DIR`: re-signs `snapshot.json` and `timestamp.json` with the
+//!   online snapshot and timestamp keys only (`DIR` needs just those two), before they expire.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -38,7 +40,7 @@ use sha2::{Digest, Sha256};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR [--publisher-keys DIR] [--count N] [--threshold T] | rotate --keys DIR --role ROLE [--publisher-keys DIR] | dist --out DIR [--target TRIPLE] | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--publisher-keys DIR] [--resume]>";
+const USAGE: &str = "usage: cargo xtask <check-architecture | check-contract | keygen --keys DIR [--publisher-keys DIR] [--count N] [--threshold T] | rotate --keys DIR --role ROLE [--publisher-keys DIR] | dist --out DIR [--target TRIPLE] | sbom OUT | publish --keys DIR --dist DIR --repo DIR [--publisher-keys DIR] [--resume] | refresh --keys DIR --repo DIR>";
 /// The first-party publisher: its delegated role name and the ids it may publish.
 const PUBLISHER_ROLE: &str = "calve";
 const PUBLISHER_PREFIX: &str = "org.calve.";
@@ -90,6 +92,10 @@ fn main() {
                 let pubdir = flag("--publisher-keys").unwrap_or_else(|| k.join(PUBLISHER_ROLE));
                 publish(&k, &pubdir, &d, &r, args.iter().any(|a| a == "--resume"))
             }
+            _ => Err(USAGE.into()),
+        },
+        Some("refresh") => match (flag("--keys"), flag("--repo")) {
+            (Some(k), Some(r)) => refresh(&k, &r),
             _ => Err(USAGE.into()),
         },
         _ => Err(USAGE.into()),
@@ -983,6 +989,63 @@ fn stage(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path) -> Result<Vec<(St
     Ok(files)
 }
 
+/// Re-signs `snapshot.json` (same `meta`, next version) and `timestamp.json` with only the
+/// online snapshot and timestamp keys, so a published repository does not expire between
+/// publishes. Targets, the publisher's role and root are untouched (offline keys).
+fn refresh(keys: &Path, repo: &Path) -> Result {
+    refuse_in_worktree(keys)?;
+    if repo.join(".publish/order.json").exists() {
+        return Err("an interrupted publish is staged; finish it with publish --resume".into());
+    }
+    let root = read_signed(repo, "root.json")?.ok_or("no root.json: publish first")?;
+    let snapshot_key = load_key(keys, "snapshot")?;
+    let timestamp_key = load_key(keys, "timestamp")?;
+    // Clients reject metadata signed by a key root does not name; fail here instead.
+    for (role, k) in [("snapshot", &snapshot_key), ("timestamp", &timestamp_key)] {
+        if root["roles"][role]["keyids"] != json!([key_id(k)]) {
+            return Err(format!("{role}.key is not the {role} key root.json names").into());
+        }
+    }
+    let old = read_signed(repo, "snapshot.json")?.ok_or("no snapshot.json: publish first")?;
+    let stamped = read_signed(repo, "timestamp.json")?.ok_or("no timestamp.json")?;
+    let version = old["version"]
+        .as_u64()
+        .ok_or("snapshot.json: version")?
+        .max(
+            stamped["version"]
+                .as_u64()
+                .ok_or("timestamp.json: version")?,
+        )
+        + 1;
+    let snapshot = envelope(
+        &json!({"_type": "snapshot", "spec_version": "1.0.31", "version": version,
+            "expires": expires(30), "meta": old["meta"]}),
+        &snapshot_key,
+    )?;
+    let timestamp = envelope(
+        &json!({"_type": "timestamp", "spec_version": "1.0.31", "version": version,
+            "expires": expires(7), "meta": {"snapshot.json": {"version": version,
+                "length": snapshot.len(), "hashes": {"sha256": sha(&snapshot)}}}}),
+        &timestamp_key,
+    )?;
+    // timestamp.json last: until it is replaced, clients see the previous version.
+    for (path, bytes) in [
+        (format!("metadata/{version}.snapshot.json"), &snapshot),
+        ("metadata/snapshot.json".to_owned(), &snapshot),
+        ("metadata/timestamp.json".to_owned(), &timestamp),
+    ] {
+        let to = repo.join(path);
+        let tmp = to.with_extension("xtask-tmp");
+        fs::write(&tmp, bytes)?;
+        fs::rename(&tmp, &to)?;
+    }
+    println!(
+        "refreshed {} to snapshot/timestamp version {version}",
+        repo.display()
+    );
+    Ok(())
+}
+
 fn publish(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path, resume: bool) -> Result {
     refuse_in_worktree(keys)?;
     refuse_in_worktree(pubdir)?;
@@ -1033,6 +1096,45 @@ fn publish(keys: &Path, pubdir: &Path, dist: &Path, repo: &Path, resume: bool) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `refresh` bumps snapshot and timestamp, keeps the snapshot's `meta`, chains the new
+    /// snapshot's hash into the timestamp, and refuses a key root does not name.
+    #[test]
+    fn refresh_resigns_snapshot_and_timestamp_only() {
+        let t = std::env::temp_dir().join(format!("xtask-refresh-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&t);
+        let (keys, other, dist, repo) = (t.join("k"), t.join("o"), t.join("dist"), t.join("r"));
+        keygen(&keys, &keys.join("calve"), 1, 1).unwrap();
+        keygen(&other, &other.join("calve"), 1, 1).unwrap();
+        fs::create_dir_all(&dist).unwrap();
+        publish(&keys, &keys.join("calve"), &dist, &repo, false).unwrap();
+        let targets = fs::read(repo.join("metadata/targets.json")).unwrap();
+        let before = read_signed(&repo, "snapshot.json").unwrap().unwrap();
+
+        refresh(&keys, &repo).unwrap();
+        let snap = read_signed(&repo, "snapshot.json").unwrap().unwrap();
+        let ts = read_signed(&repo, "timestamp.json").unwrap().unwrap();
+        assert_eq!(snap["version"], 2);
+        assert_eq!(snap["meta"], before["meta"]);
+        assert_eq!(ts["version"], 2);
+        let bytes = fs::read(repo.join("metadata/2.snapshot.json")).unwrap();
+        assert_eq!(
+            bytes,
+            fs::read(repo.join("metadata/snapshot.json")).unwrap()
+        );
+        assert_eq!(ts["meta"]["snapshot.json"]["hashes"]["sha256"], sha(&bytes));
+        assert_eq!(
+            targets,
+            fs::read(repo.join("metadata/targets.json")).unwrap()
+        );
+
+        assert!(refresh(&other, &repo).is_err(), "a key root does not name");
+        assert_eq!(
+            read_signed(&repo, "timestamp.json").unwrap().unwrap()["version"],
+            2
+        );
+        fs::remove_dir_all(&t).unwrap();
+    }
 
     /// Plan §49 rule 6: an extension package links its domain crates, never Calve's daemon.
     #[test]

@@ -7,7 +7,7 @@ languages and project resources comes from the packages enabled in a Project.
 | Extension | Id | What it provides |
 |---|---|---|
 | `software` | `org.calve.software` | Project files as exact snapshots: ignore rules (`.calveignore` plus software and language defaults), capture, rename detection, line diffs, snapshot verifier, change-size evaluator |
-| `general` | `org.calve.general` | Notes, checklists, records and artifact references (`calve resource set note:plan=…`) |
+| `general` | `org.calve.general` | Notes, checklists, records and artifact references (`clv resource set note:plan=…`) |
 | `rust`, `go`, `python`, `javascript-typescript`, `java`, `c-cpp`, `shell`, `hcl` | `org.calve.<lang>` | Language detection, check plans and the verifier that judges check evidence |
 
 Each package has three parts (see [docs/authoring.md](docs/authoring.md)):
@@ -21,10 +21,14 @@ Each package has three parts (see [docs/authoring.md](docs/authoring.md)):
 
 ## Using the extensions
 
+The first-party catalog is served at `https://calvehq.github.io/calve-extensions/`. Download its
+first root, check its digest against the one published here, then add it:
+
 ```sh
-calve extension catalog add calve <catalog URL> --root 1.root.json --root-digest <sha256>
-calve extension install org.calve.software --acknowledge-native
-calve extension enable org.calve.software --acknowledge-native
+curl -fsSLO https://calvehq.github.io/calve-extensions/metadata/1.root.json
+clv extension catalog add calve https://calvehq.github.io/calve-extensions/ --root 1.root.json --root-digest <sha256>
+clv extension install org.calve.software --acknowledge-native
+clv extension enable org.calve.software --acknowledge-native
 ```
 
 ## Development

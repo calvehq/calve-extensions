@@ -1,0 +1,73 @@
+name: catalog-refresh
+
+# Re-signs the published catalog's snapshot.json and timestamp.json (gh-pages) before they
+# expire: timestamp after 7 days, snapshot after 30. Only the online snapshot and timestamp keys
+# live in GitHub, in the `catalog-online` environment; root, targets and the publisher's keys
+# never leave the publisher's machine (docs/publishing.md).
+on:
+  schedule:
+    # Monday and Thursday: never more than 4 days between runs.
+    - cron: "23 4 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never two writers on gh-pages.
+concurrency:
+  group: catalog-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Compiling runs every dependency's build script; none of them shares a job with the keys.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build xtask
+        run: |
+          rustup toolchain install --no-self-update
+          cargo build --locked -q -p xtask
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: xtask
+          path: target/debug/xtask
+
+  refresh:
+    # The only job with keys and the only one that writes. It compiles nothing.
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: catalog-online
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: gh-pages
+          path: site
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: xtask
+          path: bin
+      - name: Re-sign snapshot and timestamp
+        env:
+          SNAPSHOT_KEY: ${{ secrets.CATALOG_SNAPSHOT_KEY }}
+          TIMESTAMP_KEY: ${{ secrets.CATALOG_TIMESTAMP_KEY }}
+        run: |
+          keys="$RUNNER_TEMP/keys"
+          trap 'rm -rf "$keys"' EXIT
+          umask 077 && mkdir "$keys"
+          printf '%s' "$SNAPSHOT_KEY" > "$keys/snapshot.key"
+          printf '%s' "$TIMESTAMP_KEY" > "$keys/timestamp.key"
+          chmod +x bin/xtask
+          bin/xtask refresh --keys "$keys" --repo site
+      - name: Push
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add metadata
+          git commit -q -m "catalog: refresh snapshot and timestamp"
+          git push
