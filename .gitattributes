@@ -1,0 +1,3 @@
+# Checked out with LF on every platform: packages embed metadata and refs documents whose
+# exact bytes are hashed (calve.refs/1), and Windows runners convert to CRLF by default.
+* text=auto eol=lf
