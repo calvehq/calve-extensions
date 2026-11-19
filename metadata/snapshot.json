@@ -2,12 +2,12 @@
   "signatures": [
     {
       "keyid": "2b64c8d3572234e9f91fdf6114dfa400636c6561e6a0fb005800cc9525a3a15d",
-      "sig": "bbd00352b7a1b913a5a58c2815484beb1da0546cd334bf0060276898ff3b4d7e23c215d9abd352190f5857c4be7cd23e1c7d5ebdfadaa99e68efb046f0462407"
+      "sig": "ef85594a9ec2f8f4400201631e4790f528e9128f754cfa51a6145bbbff04fbb72d6f3387b32b1597864a7313cd85477066542344abfd09bfa9e7cc2fe370760a"
     }
   ],
   "signed": {
     "_type": "snapshot",
-    "expires": "2026-12-17T11:32:12Z",
+    "expires": "2026-12-19T13:25:51Z",
     "meta": {
       "calve.json": {
         "version": 1
@@ -17,6 +17,6 @@
       }
     },
     "spec_version": "1.0.31",
-    "version": 2
+    "version": 3
   }
 }
